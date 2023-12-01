@@ -1,3 +1,5 @@
+pub mod query;
+
 pub struct Lnurl(url::Url);
 
 impl TryFrom<&str> for Lnurl {
