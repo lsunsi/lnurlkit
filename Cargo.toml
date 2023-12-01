@@ -2,7 +2,10 @@
 name = "lnurl-kit"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Lucas Sunsi Abreu <lsunsi@pm.me>"]
+description = "All you need to support LNURL and nothing more"
+keywords = ["bitcoin", "lightning", "lnurl"]
+repository = "https://github.com/lsunsi/lnurl-kit"
+license = "GPL-3.0-only"
 
 [dependencies]
