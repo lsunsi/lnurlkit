@@ -8,6 +8,7 @@ pub struct PayRequest<'a> {
     pub long_description: Option<String>,
     pub jpeg: Option<Vec<u8>>,
     pub png: Option<Vec<u8>>,
+    pub comment_size: u64,
     pub min: u64,
     pub max: u64,
 }
@@ -27,9 +28,13 @@ pub(crate) fn build<'a>(
         min_sendable: u64,
         #[serde(rename = "maxSendable")]
         max_sendable: u64,
+        #[serde(rename = "commentAllowed")]
+        comment_allowed: Option<u64>,
     }
 
     let d: Deserialized = miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
+    let comment_size = d.comment_allowed.unwrap_or(0);
+
     let metadata = miniserde::json::from_str::<Vec<(String, Value)>>(&d.metadata)
         .map_err(|_| "deserialize metadata failed")?;
 
@@ -73,12 +78,13 @@ pub(crate) fn build<'a>(
         max: d.max_sendable,
         short_description,
         long_description,
+        comment_size,
         jpeg,
         png,
     })
 }
 
-pub struct PayRequestResponse {
+pub struct GeneratedInvoice {
     pub pr: String,
     pub disposable: bool,
 }
@@ -89,18 +95,23 @@ impl PayRequest<'_> {
     /// Returns errors on network or deserialization failures.
     pub async fn generate_invoice(
         mut self,
+        comment: &str,
         millisatoshis: u64,
-    ) -> Result<PayRequestResponse, &'static str> {
+    ) -> Result<GeneratedInvoice, &'static str> {
         #[derive(miniserde::Deserialize)]
         struct Deserialized {
             pr: String,
             disposable: Option<bool>,
         }
 
-        self.callback
-            .0
-            .query_pairs_mut()
-            .append_pair("amount", &millisatoshis.to_string());
+        self.callback.0.query_pairs_mut().extend_pairs(
+            [
+                (!comment.is_empty()).then_some(("comment", comment)),
+                Some(("amount", &millisatoshis.to_string())),
+            ]
+            .into_iter()
+            .flatten(),
+        );
 
         let response = self
             .client
@@ -113,7 +124,7 @@ impl PayRequest<'_> {
         let response =
             miniserde::json::from_str::<Deserialized>(&body).map_err(|_| "deserialize failed")?;
 
-        Ok(PayRequestResponse {
+        Ok(GeneratedInvoice {
             pr: response.pr,
             disposable: response.disposable.unwrap_or(false),
         })

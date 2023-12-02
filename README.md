@@ -20,7 +20,7 @@ This library works as a toolkit so you can serve and make your LNURL requests wi
 - [LUD-09](https://github.com/lnurl/luds/blob/luds/09.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-10](https://github.com/lnurl/luds/blob/luds/10.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-11](https://github.com/lnurl/luds/blob/luds/11.md): ✅ implementation 🆘 example 🆘 test
-- [LUD-12](https://github.com/lnurl/luds/blob/luds/12.md): 🆘 implementation 🆘 example 🆘 test
+- [LUD-12](https://github.com/lnurl/luds/blob/luds/12.md): ✅ implementation 🆘 example 🆘 test
 - [LUD-13](https://github.com/lnurl/luds/blob/luds/13.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-14](https://github.com/lnurl/luds/blob/luds/14.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-15](https://github.com/lnurl/luds/blob/luds/15.md): 🆘 implementation 🆘 example 🆘 test

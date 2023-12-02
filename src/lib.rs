@@ -1,3 +1,6 @@
+#![allow(clippy::multiple_crate_versions)]
+// socket2 from hyper and tokio
+
 mod channel_request;
 mod pay_request;
 mod serde;
