@@ -1,43 +1,54 @@
-#[derive(serde::Deserialize)]
-#[serde(tag = "tag", rename_all = "camelCase")]
 pub enum Query {
     ChannelRequest(ChannelRequest),
 }
 
-impl TryFrom<&[u8]> for Query {
-    type Error = &'static str;
+#[derive(miniserde::Deserialize)]
+struct QueryTag {
+    tag: String,
+}
 
-    fn try_from(s: &[u8]) -> Result<Self, Self::Error> {
-        serde_json::from_slice(s).map_err(|_| "deserialization failed")
+impl std::str::FromStr for Query {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let tag = miniserde::json::from_str::<QueryTag>(s).map_err(|_| "deserialize tag failed")?;
+
+        match &tag.tag as &str {
+            "channelRequest" => {
+                let a = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
+                Ok(Query::ChannelRequest(a))
+            }
+            _ => Err("unknown tag"),
+        }
     }
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, miniserde::Deserialize)]
 pub struct ChannelRequest {
+    callback: crate::serde::Url,
     pub uri: String,
-    callback: url::Url,
     k1: String,
 }
 
 impl ChannelRequest {
     pub fn callback_accept(mut self, remoteid: &str, private: bool) -> url::Url {
-        self.callback.query_pairs_mut().extend_pairs([
+        self.callback.0.query_pairs_mut().extend_pairs([
             ("k1", &self.k1 as &str),
             ("remoteid", remoteid),
             ("private", if private { "1" } else { "0" }),
         ]);
 
-        self.callback
+        self.callback.0
     }
 
     pub fn callback_cancel(mut self, remoteid: &str) -> url::Url {
-        self.callback.query_pairs_mut().extend_pairs([
+        self.callback.0.query_pairs_mut().extend_pairs([
             ("k1", &self.k1 as &str),
             ("remoteid", remoteid),
             ("cancel", "1"),
         ]);
 
-        self.callback
+        self.callback.0
     }
 }
 
@@ -54,11 +65,11 @@ mod tests {
 			}
         "#;
 
-        let Ok(super::Query::ChannelRequest(cr)) = input.as_bytes().try_into() else {
+        let Ok(super::Query::ChannelRequest(cr)) = input.parse() else {
         	panic!("Wrong query kind");
         };
 
-        assert_eq!(cr.callback.to_string(), "https://bipa.app/callback?q=1");
+        assert_eq!(cr.callback.0.to_string(), "https://bipa.app/callback?q=1");
         assert_eq!(cr.uri, "node_key@ip_address:port_number");
         assert_eq!(cr.k1, "caum");
 

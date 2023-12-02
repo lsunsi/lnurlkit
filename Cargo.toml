@@ -10,6 +10,5 @@ license = "GPL-3.0-only"
 
 [dependencies]
 bech32 = { version = "0.9.0", default-features = false }
-serde = { version = "1.0.0", features = ["derive"], default-features = false }
-serde_json = { version = "1.0.0", features = ["std"], default-features = false }
-url = { version = "2.5.0", features = ["serde"], default-features = false }
+miniserde = { version = "0.1.0", default-features = false }
+url = { version = "2.5.0", default-features = false }
