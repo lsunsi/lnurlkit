@@ -24,7 +24,7 @@ This library works as a toolkit so you can serve and make your LNURL requests wi
 - [LUD-13](https://github.com/lnurl/luds/blob/luds/13.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-14](https://github.com/lnurl/luds/blob/luds/14.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-15](https://github.com/lnurl/luds/blob/luds/15.md): 🆘 implementation 🆘 example 🆘 test
-- [LUD-16](https://github.com/lnurl/luds/blob/luds/16.md): 🆘 implementation 🆘 example 🆘 test
+- [LUD-16](https://github.com/lnurl/luds/blob/luds/16.md): ✅ implementation ⚠️ example 🆘 test
 - [LUD-17](https://github.com/lnurl/luds/blob/luds/17.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-18](https://github.com/lnurl/luds/blob/luds/18.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-19](https://github.com/lnurl/luds/blob/luds/19.md): 🆘 implementation 🆘 example 🆘 test

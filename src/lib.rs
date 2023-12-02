@@ -43,6 +43,22 @@ impl Lnurl {
 
         Ok(query)
     }
+
+    /// # Errors
+    ///
+    /// Will return error in case `address` is not a valid lnaddress,
+    /// when request or parsing fails, basically anything that goes bad.
+    pub async fn address(&self, address: &str) -> Result<pay_request::PayRequest, &'static str> {
+        let (identifier, domain) = address.split_once('@').ok_or("split failed")?;
+        let url = url::Url::parse(&format!("https://{domain}/.well-known/lnurlp/{identifier}"))
+            .map_err(|_| "bad url")?;
+
+        let response = self.0.get(url).send().await.map_err(|_| "request failed")?;
+        let body = response.text().await.map_err(|_| "body failed")?;
+        let query = pay_request::build(&body, &self.0).map_err(|_| "deserialize data failed")?;
+
+        Ok(query)
+    }
 }
 
 #[derive(Debug)]
