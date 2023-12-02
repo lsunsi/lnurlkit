@@ -51,14 +51,14 @@ impl std::str::FromStr for Query {
         let tag = miniserde::json::from_str::<QueryTag>(s).map_err(|_| "deserialize tag failed")?;
 
         if tag.tag == channel_request::TAG {
-            let a = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
-            Ok(Query::ChannelRequest(a))
+            let cr = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
+            Ok(Query::ChannelRequest(cr))
         } else if tag.tag == withdrawal_request::TAG {
-            let a = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
-            Ok(Query::WithdrawalRequest(a))
+            let wr = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
+            Ok(Query::WithdrawalRequest(wr))
         } else if tag.tag == pay_request::TAG {
-            let a = s.parse().map_err(|_| "deserialize data failed")?;
-            Ok(Query::PayRequest(a))
+            let pr = s.parse().map_err(|_| "deserialize data failed")?;
+            Ok(Query::PayRequest(pr))
         } else {
             Err("unknown tag")
         }

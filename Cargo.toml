@@ -4,12 +4,26 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Lucas Sunsi Abreu <lsunsi@pm.me>"]
 description = "All you need to support LNURL and nothing more"
+categories = ["finance", "web-programming", "web-programming::http-client", "api-bindings", "asynchronous"]
 keywords = ["bitcoin", "lightning", "lnurl"]
 repository = "https://github.com/lsunsi/lnurl-kit"
 license = "GPL-3.0-only"
+readme = "README.md"
 
 [dependencies]
 base64 = { version = "0.21.5", features = ["std"], default-features = false }
 bech32 = { version = "0.9.0", default-features = false }
 miniserde = { version = "0.1.0", default-features = false }
 url = { version = "2.5.0", default-features = false }
+
+[lints.rust]
+warnings = "deny"
+
+[lints.clippy]
+cargo = "deny"
+complexity = "deny"
+correctness = "deny"
+pedantic = "deny"
+perf = "deny"
+style = "deny"
+suspicious = "deny"
