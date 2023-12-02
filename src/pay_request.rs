@@ -107,6 +107,7 @@ pub(crate) fn build<'a>(
     })
 }
 
+#[derive(Debug)]
 pub struct GeneratedInvoice {
     pub pr: String,
     pub disposable: bool,
@@ -149,7 +150,7 @@ impl PayRequest<'_> {
 
         Ok(GeneratedInvoice {
             pr: response.pr,
-            disposable: response.disposable.unwrap_or(false),
+            disposable: response.disposable.unwrap_or(true),
         })
     }
 }
