@@ -78,14 +78,23 @@ pub(crate) fn build<'a>(
     })
 }
 
+pub struct PayRequestResponse {
+    pub pr: String,
+    pub disposable: bool,
+}
+
 impl PayRequest<'_> {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
-    pub async fn callback(mut self, millisatoshis: u64) -> Result<String, &'static str> {
+    pub async fn generate_invoice(
+        mut self,
+        millisatoshis: u64,
+    ) -> Result<PayRequestResponse, &'static str> {
         #[derive(miniserde::Deserialize)]
         struct Deserialized {
             pr: String,
+            disposable: Option<bool>,
         }
 
         self.callback
@@ -104,6 +113,9 @@ impl PayRequest<'_> {
         let response =
             miniserde::json::from_str::<Deserialized>(&body).map_err(|_| "deserialize failed")?;
 
-        Ok(response.pr)
+        Ok(PayRequestResponse {
+            pr: response.pr,
+            disposable: response.disposable.unwrap_or(false),
+        })
     }
 }
