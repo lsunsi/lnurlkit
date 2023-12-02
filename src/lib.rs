@@ -1,4 +1,5 @@
 mod channel_request;
+mod pay_request;
 mod serde;
 mod withdrawal_request;
 
@@ -33,8 +34,9 @@ impl std::str::FromStr for Lnurl {
 }
 
 pub enum Query {
-    ChannelRequest(crate::channel_request::ChannelRequest),
-    WithdrawalRequest(crate::withdrawal_request::WithdrawalRequest),
+    ChannelRequest(channel_request::ChannelRequest),
+    WithdrawalRequest(withdrawal_request::WithdrawalRequest),
+    PayRequest(pay_request::PayRequest),
 }
 
 #[derive(miniserde::Deserialize)]
@@ -48,12 +50,15 @@ impl std::str::FromStr for Query {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let tag = miniserde::json::from_str::<QueryTag>(s).map_err(|_| "deserialize tag failed")?;
 
-        if tag.tag == crate::channel_request::TAG {
+        if tag.tag == channel_request::TAG {
             let a = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
             Ok(Query::ChannelRequest(a))
-        } else if tag.tag == crate::withdrawal_request::TAG {
+        } else if tag.tag == withdrawal_request::TAG {
             let a = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
             Ok(Query::WithdrawalRequest(a))
+        } else if tag.tag == pay_request::TAG {
+            let a = s.parse().map_err(|_| "deserialize data failed")?;
+            Ok(Query::PayRequest(a))
         } else {
             Err("unknown tag")
         }
