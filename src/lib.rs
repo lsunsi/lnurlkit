@@ -1,5 +1,6 @@
 mod channel_request;
 mod serde;
+mod withdrawal_request;
 
 pub struct Lnurl(url::Url);
 
@@ -33,6 +34,7 @@ impl std::str::FromStr for Lnurl {
 
 pub enum Query {
     ChannelRequest(crate::channel_request::ChannelRequest),
+    WithdrawalRequest(crate::withdrawal_request::WithdrawalRequest),
 }
 
 #[derive(miniserde::Deserialize)]
@@ -49,6 +51,9 @@ impl std::str::FromStr for Query {
         if tag.tag == crate::channel_request::TAG {
             let a = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
             Ok(Query::ChannelRequest(a))
+        } else if tag.tag == crate::withdrawal_request::TAG {
+            let a = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
+            Ok(Query::WithdrawalRequest(a))
         } else {
             Err("unknown tag")
         }
