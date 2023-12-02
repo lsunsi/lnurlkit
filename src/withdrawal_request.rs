@@ -1,6 +1,6 @@
 pub const TAG: &str = "withdrawalRequest";
 
-#[derive(miniserde::Deserialize)]
+#[derive(Debug, miniserde::Deserialize)]
 pub struct WithdrawalRequest {
     callback: crate::serde::Url,
     k1: String,

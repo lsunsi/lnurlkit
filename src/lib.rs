@@ -3,12 +3,17 @@ mod pay_request;
 mod serde;
 mod withdrawal_request;
 
-pub struct Lnurl(url::Url);
+pub use pay_request::PayRequest;
 
-impl std::str::FromStr for Lnurl {
-    type Err = &'static str;
+#[derive(Clone, Default)]
+pub struct Lnurl(reqwest::Client);
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+impl Lnurl {
+    /// # Errors
+    ///
+    /// Will return error in case `s` is not a valid lnurl,
+    /// when request or parsing fails, basically anything that goes bad.
+    pub async fn query(&self, s: &str) -> Result<Query, &'static str> {
         let Ok((hrp, data, _)) = bech32::decode(s) else {
             return Err("bech32 decode failed");
         };
@@ -29,49 +34,39 @@ impl std::str::FromStr for Lnurl {
             return Err("bech32 text is not a url");
         };
 
-        Ok(Lnurl(url))
+        let response = self.0.get(url).send().await.map_err(|_| "request failed")?;
+        let body = response.text().await.map_err(|_| "body failed")?;
+        let query = build(&body, &self.0).map_err(|_| "parse failed")?;
+
+        Ok(query)
     }
 }
 
-pub enum Query {
+#[derive(Debug)]
+pub enum Query<'a> {
     ChannelRequest(channel_request::ChannelRequest),
     WithdrawalRequest(withdrawal_request::WithdrawalRequest),
-    PayRequest(pay_request::PayRequest),
+    PayRequest(pay_request::PayRequest<'a>),
 }
 
-#[derive(miniserde::Deserialize)]
-struct QueryTag {
-    tag: String,
-}
-
-impl std::str::FromStr for Query {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let tag = miniserde::json::from_str::<QueryTag>(s).map_err(|_| "deserialize tag failed")?;
-
-        if tag.tag == channel_request::TAG {
-            let cr = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
-            Ok(Query::ChannelRequest(cr))
-        } else if tag.tag == withdrawal_request::TAG {
-            let wr = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
-            Ok(Query::WithdrawalRequest(wr))
-        } else if tag.tag == pay_request::TAG {
-            let pr = s.parse().map_err(|_| "deserialize data failed")?;
-            Ok(Query::PayRequest(pr))
-        } else {
-            Err("unknown tag")
-        }
+fn build<'a>(s: &str, client: &'a reqwest::Client) -> Result<Query<'a>, &'static str> {
+    #[derive(miniserde::Deserialize)]
+    struct Tag {
+        tag: String,
     }
-}
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn lnurl_try_from() {
-        let input = "LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0V9CXJ0M385EKVCENXC6R2C35XVUKXEFCV5MKVV34X5EKZD3EV56NYD3HXQURZEPEXEJXXEPNXSCRVWFNV9NXZCN9XQ6XYEFHVGCXXCMYXYMNSERXFQ5FNS";
-        let lnurl: super::Lnurl = input.parse().expect("parse");
+    let tag = miniserde::json::from_str::<Tag>(s).map_err(|_| "deserialize tag failed")?;
 
-        assert_eq!(lnurl.0.to_string(), "https://service.com/api?q=3fc3645b439ce8e7f2553a69e5267081d96dcd340693afabe04be7b0ccd178df");
+    if tag.tag == channel_request::TAG {
+        let cr = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
+        Ok(Query::ChannelRequest(cr))
+    } else if tag.tag == withdrawal_request::TAG {
+        let wr = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
+        Ok(Query::WithdrawalRequest(wr))
+    } else if tag.tag == pay_request::TAG {
+        let pr = pay_request::build(s, client).map_err(|_| "deserialize data failed")?;
+        Ok(Query::PayRequest(pr))
+    } else {
+        Err("unknown tag")
     }
 }

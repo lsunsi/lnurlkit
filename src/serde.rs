@@ -3,7 +3,7 @@ use miniserde::{de::Visitor, make_place, Deserialize, Error, Result};
 make_place!(Place);
 
 #[derive(Debug, Clone)]
-pub struct Url(pub url::Url);
+pub(crate) struct Url(pub(crate) url::Url);
 
 impl Visitor for Place<Url> {
     fn string(&mut self, s: &str) -> Result<()> {
