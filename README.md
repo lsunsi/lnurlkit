@@ -3,11 +3,11 @@
 
 A ready-to-use¹ implementation of the [LNURL](https://github.com/lnurl/luds) specification.
 
-This library works as a client so you can support the protocol with ease and even learn about it.
+This library works as a toolkit so you can serve and make your LNURL requests with ease.
 
 ¹ _Soon to be. Currently it's still on early stages and should be considered experimental._
 
-## Current support
+## Current client support
 
 - [LUD-01](https://github.com/lnurl/luds/blob/luds/01.md): ✅ implementation ⚠️ example 🆘 test
 - [LUD-02](https://github.com/lnurl/luds/blob/luds/02.md): ✅ implementation 🆘 example 🆘 test
@@ -30,10 +30,16 @@ This library works as a client so you can support the protocol with ease and eve
 - [LUD-19](https://github.com/lnurl/luds/blob/luds/19.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-20](https://github.com/lnurl/luds/blob/luds/20.md): 🆘 implementation 🆘 example 🆘 test
 
+## Current server support
+
+- ###### Soon. ™
+
 ## Future work
 - Remove SOS signs from above list (by just working on it)
+- Add types helpers and all the stuff needed for the server side
 - Make it client agnostic (currently it uses [reqwest](https://github.com/seanmonstar/reqwest))
 - Make it both sync and async (I want no part in this war)
 - Breaking it into client / structures (flexibility right)
+- Better, WAY better error handling. Geez
 
 ###### Thanks
