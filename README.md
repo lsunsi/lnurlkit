@@ -17,7 +17,7 @@ This library works as a toolkit so you can serve and make your LNURL requests wi
 - [LUD-06](https://github.com/lnurl/luds/blob/luds/06.md): ✅ implementation ⚠️ example 🆘 test
 - [LUD-07](https://github.com/lnurl/luds/blob/luds/07.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-08](https://github.com/lnurl/luds/blob/luds/08.md): 🆘 implementation 🆘 example 🆘 test
-- [LUD-09](https://github.com/lnurl/luds/blob/luds/09.md): 🆘 implementation 🆘 example 🆘 test
+- [LUD-09](https://github.com/lnurl/luds/blob/luds/09.md): ✅ implementation 🆘 example 🆘 test
 - [LUD-10](https://github.com/lnurl/luds/blob/luds/10.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-11](https://github.com/lnurl/luds/blob/luds/11.md): ✅ implementation 🆘 example 🆘 test
 - [LUD-12](https://github.com/lnurl/luds/blob/luds/12.md): ✅ implementation 🆘 example 🆘 test
@@ -28,7 +28,7 @@ This library works as a toolkit so you can serve and make your LNURL requests wi
 - [LUD-17](https://github.com/lnurl/luds/blob/luds/17.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-18](https://github.com/lnurl/luds/blob/luds/18.md): 🆘 implementation 🆘 example 🆘 test
 - [LUD-19](https://github.com/lnurl/luds/blob/luds/19.md): 🆘 implementation 🆘 example 🆘 test
-- [LUD-20](https://github.com/lnurl/luds/blob/luds/20.md): 🆘 implementation 🆘 example 🆘 test
+- [LUD-20](https://github.com/lnurl/luds/blob/luds/20.md): ✅ implementation 🆘 example 🆘 test
 
 ## Current server support
 

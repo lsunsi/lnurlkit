@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 pub const TAG: &str = "payRequest";
 
 #[derive(Clone, Debug)]
@@ -6,11 +8,18 @@ pub struct PayRequest<'a> {
     callback: crate::serde::Url,
     pub short_description: String,
     pub long_description: Option<String>,
+    pub success_action: Option<SuccessAction>,
     pub jpeg: Option<Vec<u8>>,
     pub png: Option<Vec<u8>>,
     pub comment_size: u64,
     pub min: u64,
     pub max: u64,
+}
+
+#[derive(Clone, Debug)]
+pub enum SuccessAction {
+    Url(url::Url, String),
+    Message(String),
 }
 
 pub(crate) fn build<'a>(
@@ -21,7 +30,7 @@ pub(crate) fn build<'a>(
     use miniserde::{json::Value, Deserialize};
 
     #[derive(Deserialize)]
-    struct Deserialized {
+    struct Payload {
         metadata: String,
         callback: crate::serde::Url,
         #[serde(rename = "minSendable")]
@@ -30,12 +39,25 @@ pub(crate) fn build<'a>(
         max_sendable: u64,
         #[serde(rename = "commentAllowed")]
         comment_allowed: Option<u64>,
+        #[serde(rename = "successAction")]
+        success_action: Option<BTreeMap<String, String>>,
     }
 
-    let d: Deserialized = miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
-    let comment_size = d.comment_allowed.unwrap_or(0);
+    let p: Payload = miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
+    let comment_size = p.comment_allowed.unwrap_or(0);
 
-    let metadata = miniserde::json::from_str::<Vec<(String, Value)>>(&d.metadata)
+    let success_action = p
+        .success_action
+        .and_then(|sa| match sa.get("tag")? as &str {
+            "message" => Some(SuccessAction::Message(sa.get("message")?.to_owned())),
+            "url" => {
+                let url = url::Url::parse(sa.get("url")?).ok()?;
+                Some(SuccessAction::Url(url, sa.get("description")?.to_owned()))
+            }
+            _ => None,
+        });
+
+    let metadata = miniserde::json::from_str::<Vec<(String, Value)>>(&p.metadata)
         .map_err(|_| "deserialize metadata failed")?;
 
     let short_description = metadata
@@ -73,11 +95,12 @@ pub(crate) fn build<'a>(
 
     Ok(PayRequest {
         client,
-        callback: d.callback,
-        min: d.min_sendable,
-        max: d.max_sendable,
+        callback: p.callback,
+        min: p.min_sendable,
+        max: p.max_sendable,
         short_description,
         long_description,
+        success_action,
         comment_size,
         jpeg,
         png,
