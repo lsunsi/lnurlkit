@@ -1,5 +1,5 @@
 [package]
-name = "lnurl-kit"
+name = "lnurlkit"
 version = "0.1.0"
 edition = "2021"
 authors = ["Lucas Sunsi Abreu <lsunsi@pm.me>"]
@@ -7,6 +7,7 @@ description = "All you need to support LNURL and nothing more"
 categories = ["finance", "web-programming", "web-programming::http-client", "api-bindings", "asynchronous"]
 keywords = ["bitcoin", "lightning", "lnurl"]
 repository = "https://github.com/lsunsi/lnurl-kit"
+homepage = "https://github.com/lsunsi/lnurlkit"
 license = "GPL-3.0-only"
 readme = "README.md"
 
