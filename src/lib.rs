@@ -44,8 +44,8 @@ impl Lnurl {
 
 #[derive(Debug)]
 pub enum Query<'a> {
-    ChannelRequest(channel_request::ChannelRequest),
-    WithdrawalRequest(withdrawal_request::WithdrawalRequest),
+    ChannelRequest(channel_request::ChannelRequest<'a>),
+    WithdrawalRequest(withdrawal_request::WithdrawalRequest<'a>),
     PayRequest(pay_request::PayRequest<'a>),
 }
 
@@ -58,10 +58,10 @@ fn build<'a>(s: &str, client: &'a reqwest::Client) -> Result<Query<'a>, &'static
     let tag = miniserde::json::from_str::<Tag>(s).map_err(|_| "deserialize tag failed")?;
 
     if tag.tag == channel_request::TAG {
-        let cr = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
+        let cr = channel_request::build(s, client).map_err(|_| "deserialize data failed")?;
         Ok(Query::ChannelRequest(cr))
     } else if tag.tag == withdrawal_request::TAG {
-        let wr = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
+        let wr = withdrawal_request::build(s, client).map_err(|_| "deserialize data failed")?;
         Ok(Query::WithdrawalRequest(wr))
     } else if tag.tag == pay_request::TAG {
         let pr = pay_request::build(s, client).map_err(|_| "deserialize data failed")?;

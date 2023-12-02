@@ -1,53 +1,59 @@
 pub const TAG: &str = "withdrawalRequest";
 
-#[derive(Debug, miniserde::Deserialize)]
-pub struct WithdrawalRequest {
+#[derive(Clone, Debug)]
+pub struct WithdrawalRequest<'a> {
+    client: &'a reqwest::Client,
     callback: crate::serde::Url,
     k1: String,
-    #[serde(rename = "defaultDescription")]
     pub description: String,
-    #[serde(rename = "minWithdrawable")]
     pub min: u64,
-    #[serde(rename = "maxWithdrawable")]
     pub max: u64,
 }
 
-impl WithdrawalRequest {
-    pub fn callback(mut self, pr: &str) -> url::Url {
+pub(crate) fn build<'a>(
+    s: &str,
+    client: &'a reqwest::Client,
+) -> Result<WithdrawalRequest<'a>, &'static str> {
+    #[derive(miniserde::Deserialize)]
+    struct Deserialized {
+        k1: String,
+        callback: crate::serde::Url,
+        #[serde(rename = "defaultDescription")]
+        default_description: String,
+        #[serde(rename = "minWithdrawable")]
+        min_withdrawable: u64,
+        #[serde(rename = "maxWithdrawable")]
+        max_withdrawable: u64,
+    }
+
+    let d: Deserialized = miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
+
+    Ok(WithdrawalRequest {
+        client,
+        k1: d.k1,
+        callback: d.callback,
+        description: d.default_description,
+        min: d.min_withdrawable,
+        max: d.max_withdrawable,
+    })
+}
+
+impl WithdrawalRequest<'_> {
+    /// # Errors
+    ///
+    /// Returns errors on network or deserialization failures.
+    pub async fn callback(mut self, pr: &str) -> Result<(), &'static str> {
         self.callback
             .0
             .query_pairs_mut()
             .extend_pairs([("k1", &self.k1 as &str), ("pr", pr)]);
 
-        self.callback.0
-    }
-}
+        self.client
+            .get(self.callback.0)
+            .send()
+            .await
+            .map_err(|_| "request failed")?;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test() {
-        let input = r#"
-			{
-			    "callback": "https://bipa.app/callback?q=1",
-			    "k1": "caum",
-			    "defaultDescription": "descrição",
-			    "minWithdrawable": 1000,
-			    "maxWithdrawable": 2000
-			}
-        "#;
-
-        let cr = miniserde::json::from_str::<super::WithdrawalRequest>(input).expect("parse");
-
-        assert_eq!(cr.callback.0.to_string(), "https://bipa.app/callback?q=1");
-        assert_eq!(cr.description, "descrição");
-        assert_eq!(cr.min, 1000);
-        assert_eq!(cr.max, 2000);
-        assert_eq!(cr.k1, "caum");
-
-        assert_eq!(
-            cr.callback("peerre").to_string(),
-            "https://bipa.app/callback?q=1&k1=caum&pr=peerre"
-        );
+        Ok(())
     }
 }

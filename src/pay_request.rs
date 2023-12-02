@@ -1,6 +1,6 @@
 pub const TAG: &str = "payRequest";
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct PayRequest<'a> {
     client: &'a reqwest::Client,
     callback: crate::serde::Url,
