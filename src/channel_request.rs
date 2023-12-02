@@ -1,27 +1,4 @@
-pub enum Query {
-    ChannelRequest(ChannelRequest),
-}
-
-#[derive(miniserde::Deserialize)]
-struct QueryTag {
-    tag: String,
-}
-
-impl std::str::FromStr for Query {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let tag = miniserde::json::from_str::<QueryTag>(s).map_err(|_| "deserialize tag failed")?;
-
-        match &tag.tag as &str {
-            "channelRequest" => {
-                let a = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
-                Ok(Query::ChannelRequest(a))
-            }
-            _ => Err("unknown tag"),
-        }
-    }
-}
+pub const TAG: &str = "channelRequest";
 
 #[derive(Debug, Clone, miniserde::Deserialize)]
 pub struct ChannelRequest {
@@ -55,7 +32,7 @@ impl ChannelRequest {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn channel_request() {
+    fn test() {
         let input = r#"
 			{
 			    "tag": "channelRequest",
@@ -65,9 +42,7 @@ mod tests {
 			}
         "#;
 
-        let Ok(super::Query::ChannelRequest(cr)) = input.parse() else {
-        	panic!("Wrong query kind");
-        };
+        let cr = miniserde::json::from_str::<super::ChannelRequest>(input).expect("parse");
 
         assert_eq!(cr.callback.0.to_string(), "https://bipa.app/callback?q=1");
         assert_eq!(cr.uri, "node_key@ip_address:port_number");

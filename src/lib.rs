@@ -1,4 +1,4 @@
-pub mod query;
+mod channel_request;
 mod serde;
 
 pub struct Lnurl(url::Url);
@@ -31,10 +31,34 @@ impl std::str::FromStr for Lnurl {
     }
 }
 
+pub enum Query {
+    ChannelRequest(crate::channel_request::ChannelRequest),
+}
+
+#[derive(miniserde::Deserialize)]
+struct QueryTag {
+    tag: String,
+}
+
+impl std::str::FromStr for Query {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let tag = miniserde::json::from_str::<QueryTag>(s).map_err(|_| "deserialize tag failed")?;
+
+        if tag.tag == crate::channel_request::TAG {
+            let a = miniserde::json::from_str(s).map_err(|_| "deserialize data failed")?;
+            Ok(Query::ChannelRequest(a))
+        } else {
+            Err("unknown tag")
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
-    fn try_from() {
+    fn lnurl_try_from() {
         let input = "LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0V9CXJ0M385EKVCENXC6R2C35XVUKXEFCV5MKVV34X5EKZD3EV56NYD3HXQURZEPEXEJXXEPNXSCRVWFNV9NXZCN9XQ6XYEFHVGCXXCMYXYMNSERXFQ5FNS";
         let lnurl: super::Lnurl = input.parse().expect("parse");
 
