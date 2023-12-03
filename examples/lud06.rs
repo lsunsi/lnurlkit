@@ -1,6 +1,6 @@
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    let client = lnurlkit::Lnurl::default();
+    let client = lnurlkit::client::Client::default();
 
     let queried = client
         .query("lnurl1dp68gurn8ghj7cnfwpsjuctswqhjuam9d3kz66mwdamkutmvde6hymrs9a4k2mn4cdry4t")
@@ -9,14 +9,11 @@ async fn main() {
 
     println!("{queried:?}");
 
-    let lnurlkit::Query::PayRequest(pr) = queried else {
+    let lnurlkit::client::Query::PayRequest(pr) = queried else {
         panic!("not pay request");
     };
 
-    let invoice = pr
-        .generate_invoice("comment", 123000)
-        .await
-        .expect("callback");
+    let invoice = pr.callback("comment", 123000).await.expect("callback");
 
     println!("{invoice:?}");
 }

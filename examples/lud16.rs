@@ -1,15 +1,16 @@
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    let client = lnurlkit::Lnurl::default();
+    let client = lnurlkit::client::Client::default();
 
-    let pr = client.address("kenu@bipa.app").await.expect("address");
+    let queried = client.query("kenu@bipa.app").await.expect("address");
 
-    println!("{pr:?}");
+    println!("{queried:?}");
 
-    let invoice = pr
-        .generate_invoice("comment", 123000)
-        .await
-        .expect("callback");
+    let lnurlkit::client::Query::PayRequest(pr) = queried else {
+        panic!("not pay request");
+    };
+
+    let invoice = pr.callback("comment", 123000).await.expect("callback");
 
     println!("{invoice:?}");
 }
