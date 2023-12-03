@@ -1,6 +1,11 @@
 use axum::{http::StatusCode, routing::get, Router};
 use std::future::Future;
 
+#[must_use]
+pub fn builder<P>() -> Server<P> {
+    Server { pay_request: None }
+}
+
 pub struct Server<P> {
     pub pay_request: Option<P>,
 }

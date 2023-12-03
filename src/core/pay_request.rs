@@ -2,7 +2,7 @@ pub const TAG: &str = "payRequest";
 
 #[derive(Clone, Debug)]
 pub struct PayRequest {
-    callback: crate::serde::Url,
+    pub callback: url::Url,
     pub short_description: String,
     pub long_description: Option<String>,
     pub success_action: Option<SuccessAction>,
@@ -78,7 +78,7 @@ impl std::str::FromStr for PayRequest {
             });
 
         Ok(PayRequest {
-            callback: p.callback,
+            callback: p.callback.0,
             min: p.min_sendable,
             max: p.max_sendable,
             short_description,
@@ -130,8 +130,9 @@ impl std::fmt::Display for PayRequest {
         });
 
         f.write_str(&miniserde::json::to_string(&ser::QueryResponse {
+            tag: TAG,
             metadata,
-            callback: &self.callback,
+            callback: &crate::serde::Url(self.callback.clone()),
             min_sendable: self.min,
             max_sendable: self.max,
             comment_allowed: self.comment_size,
@@ -146,7 +147,7 @@ impl PayRequest {
     /// Returns errors on network or deserialization failures.
     #[must_use]
     pub fn callback(mut self, comment: &str, millisatoshis: u64) -> url::Url {
-        self.callback.0.query_pairs_mut().extend_pairs(
+        self.callback.query_pairs_mut().extend_pairs(
             [
                 (!comment.is_empty()).then_some(("comment", comment)),
                 Some(("amount", &millisatoshis.to_string())),
@@ -155,7 +156,7 @@ impl PayRequest {
             .flatten(),
         );
 
-        self.callback.0
+        self.callback
     }
 }
 
@@ -186,6 +187,7 @@ mod ser {
 
     #[derive(Serialize)]
     pub(super) struct QueryResponse<'a> {
+        pub tag: &'static str,
         pub metadata: String,
         pub callback: &'a Url,
         #[serde(rename = "minSendable")]

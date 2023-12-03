@@ -38,19 +38,19 @@ pub enum Query<'a> {
 #[derive(Clone, Debug)]
 pub struct PayRequest<'a> {
     client: &'a reqwest::Client,
-    core: crate::core::pay_request::PayRequest,
+    pub core: crate::core::pay_request::PayRequest,
 }
 
 #[derive(Clone, Debug)]
 pub struct ChannelRequest<'a> {
     client: &'a reqwest::Client,
-    core: crate::core::channel_request::ChannelRequest,
+    pub core: crate::core::channel_request::ChannelRequest,
 }
 
 #[derive(Clone, Debug)]
 pub struct WithdrawalRequest<'a> {
     client: &'a reqwest::Client,
-    core: crate::core::withdrawal_request::WithdrawalRequest,
+    pub core: crate::core::withdrawal_request::WithdrawalRequest,
 }
 
 impl PayRequest<'_> {
