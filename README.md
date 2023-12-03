@@ -9,7 +9,7 @@ This library works as a toolkit so you can serve and make your LNURL requests wi
 
 ## Current support
 
-- [LUD-01](https://github.com/lnurl/luds/blob/luds/01.md): ⚠️ core ⚠️ client ⚠️ server 🆘 tests
+- [LUD-01](https://github.com/lnurl/luds/blob/luds/01.md): ✅ core ✅ client ⚠️ server ⚠️ tests
 - [LUD-02](https://github.com/lnurl/luds/blob/luds/02.md): ⚠️ core ⚠️ client 🆘 server 🆘 tests
 - [LUD-03](https://github.com/lnurl/luds/blob/luds/03.md): ⚠️ core ⚠️ client 🆘 server 🆘 tests
 - [LUD-04](https://github.com/lnurl/luds/blob/luds/04.md): 🆘 core 🆘 client 🆘 server 🆘 tests
@@ -25,7 +25,7 @@ This library works as a toolkit so you can serve and make your LNURL requests wi
 - [LUD-14](https://github.com/lnurl/luds/blob/luds/14.md): 🆘 core 🆘 client 🆘 server 🆘 tests
 - [LUD-15](https://github.com/lnurl/luds/blob/luds/15.md): 🆘 core 🆘 client 🆘 server 🆘 tests
 - [LUD-16](https://github.com/lnurl/luds/blob/luds/16.md): ⚠️ core ⚠️ client 🆘 server 🆘 tests
-- [LUD-17](https://github.com/lnurl/luds/blob/luds/17.md): 🆘 core 🆘 client 🆘 server 🆘 tests
+- [LUD-17](https://github.com/lnurl/luds/blob/luds/17.md): ⚠️ core ⚠️ client ⚠️ server ⚠️ tests
 - [LUD-18](https://github.com/lnurl/luds/blob/luds/18.md): 🆘 core 🆘 client 🆘 server 🆘 tests
 - [LUD-19](https://github.com/lnurl/luds/blob/luds/19.md): 🆘 core 🆘 client 🆘 server 🆘 tests
 - [LUD-20](https://github.com/lnurl/luds/blob/luds/20.md): ⚠️ core ⚠️ client 🆘 server 🆘 tests

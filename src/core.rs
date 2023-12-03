@@ -6,7 +6,7 @@ pub mod withdrawal_request;
 ///
 /// Returns error in case `s` cannot be understood.
 pub fn resolve(s: &str) -> Result<url::Url, &'static str> {
-    if s.starts_with("lnurl1") {
+    if s.starts_with("lnurl1") | s.starts_with("LNURL1") {
         resolve_bech32(s)
     } else if s.starts_with("lnurl") || s.starts_with("keyauth") {
         resolve_scheme(s)
@@ -98,5 +98,58 @@ impl std::str::FromStr for Query {
         } else {
             Err("unknown tag")
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn resolve_bech32() {
+        let input = "lnurl1dp68gurn8ghj7argv4ex2tnfwvhkumelwv7hqmm0dc6p3ztw";
+        assert_eq!(
+            super::resolve(input).unwrap().to_string(),
+            "https://there.is/no?s=poon"
+        );
+
+        let input = "LNURL1DP68GURN8GHJ7ARGV4EX2TNFWVHKUMELWV7HQMM0DC6P3ZTW";
+        assert_eq!(
+            super::resolve(input).unwrap().to_string(),
+            "https://there.is/no?s=poon"
+        );
+    }
+
+    #[test]
+    fn resolve_address() {
+        assert_eq!(
+            super::resolve("no-spoon@there.is").unwrap().to_string(),
+            "https://there.is/.well-known/lnurlp/no-spoon"
+        );
+    }
+
+    #[test]
+    fn resolve_schemes() {
+        let input = "lnurlc://there.is/no?s=poon";
+        assert_eq!(
+            super::resolve(input).unwrap().to_string(),
+            "https://there.is/no?s=poon"
+        );
+
+        let input = "lnurlw://there.is/no?s=poon";
+        assert_eq!(
+            super::resolve(input).unwrap().to_string(),
+            "https://there.is/no?s=poon"
+        );
+
+        let input = "lnurlp://there.is/no?s=poon";
+        assert_eq!(
+            super::resolve(input).unwrap().to_string(),
+            "https://there.is/no?s=poon"
+        );
+
+        let input = "keyauth://there.is/no?s=poon";
+        assert_eq!(
+            super::resolve(input).unwrap().to_string(),
+            "https://there.is/no?s=poon"
+        );
     }
 }

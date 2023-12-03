@@ -226,3 +226,150 @@ mod de {
         pub disposable: Option<bool>,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn parse_base() {
+        let input = r#"
+            {
+                "callback": "https://yuri?o=callback",
+                "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
+                "maxSendable": 315,
+                "minSendable": 314
+            }
+        "#;
+
+        let parsed = input.parse::<super::PayRequest>().expect("parse");
+
+        assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
+        assert_eq!(parsed.short_description, "boneco do steve magal");
+        assert_eq!(parsed.min, 314);
+        assert_eq!(parsed.max, 315);
+
+        assert_eq!(parsed.comment_size, 0);
+        assert!(parsed.long_description.is_none());
+        assert!(parsed.success_action.is_none());
+        assert!(parsed.jpeg.is_none());
+        assert!(parsed.png.is_none());
+    }
+
+    #[test]
+    fn parse_comment_size() {
+        let input = r#"
+            {
+                "callback": "https://yuri?o=callback",
+                "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
+                "commentAllowed": 140,
+                "maxSendable": 315,
+                "minSendable": 314
+            }
+        "#;
+
+        let parsed = input.parse::<super::PayRequest>().expect("parse");
+        assert_eq!(parsed.comment_size, 140);
+    }
+
+    #[test]
+    fn parse_long_description() {
+        let input = r#"
+            {
+                "callback": "https://yuri?o=callback",
+                "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/long-desc\", \"mochila a jato brutal incluida\"]]",
+                "maxSendable": 315,
+                "minSendable": 314
+            }
+        "#;
+
+        let parsed = input.parse::<super::PayRequest>().expect("parse");
+        assert_eq!(
+            parsed.long_description.unwrap(),
+            "mochila a jato brutal incluida"
+        );
+    }
+
+    #[test]
+    fn parse_images() {
+        let input = r#"
+            {
+                "callback": "https://yuri?o=callback",
+                "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"image/png;base64\", \"Zm90b2JydXRhbA==\"],[\"image/jpeg;base64\", \"aW1hZ2VtYnJ1dGFs\"]]",
+                "maxSendable": 315,
+                "minSendable": 314
+            }
+        "#;
+
+        let parsed = input.parse::<super::PayRequest>().expect("parse");
+        assert_eq!(parsed.jpeg.unwrap(), b"imagembrutal");
+        assert_eq!(parsed.png.unwrap(), b"fotobrutal");
+    }
+
+    #[test]
+    fn parse_success_actions() {
+        let input = r#"
+            {
+                "callback": "https://yuri?o=callback",
+                "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
+                "maxSendable": 315,
+                "minSendable": 314,
+                "successAction": {
+                    "tag": "message",
+                    "message": "obrigado!"
+                }
+            }
+        "#;
+
+        let parsed = input.parse::<super::PayRequest>().expect("parse");
+        let Some(super::SuccessAction::Message(m)) = parsed.success_action else {
+            panic!("bad success action");
+        };
+
+        assert_eq!(m, "obrigado!");
+
+        let input = r#"
+            {
+                "callback": "https://yuri?o=callback",
+                "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
+                "maxSendable": 315,
+                "minSendable": 314,
+                "successAction": {
+                    "tag": "url",
+                    "description": "valeu demais",
+                    "url": "http://uerre.ele"
+                }
+            }
+        "#;
+
+        let parsed = input.parse::<super::PayRequest>().expect("parse");
+        let Some(super::SuccessAction::Url(u, d)) = parsed.success_action else {
+            panic!("bad success action");
+        };
+
+        assert_eq!(u.to_string(), "http://uerre.ele/");
+        assert_eq!(d, "valeu demais");
+    }
+
+    #[test]
+    fn callback() {
+        let input = r#"
+            {
+                "callback": "https://yuri?o=callback",
+                "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
+                "maxSendable": 315,
+                "minSendable": 314
+            }
+        "#;
+
+        let parsed = input.parse::<super::PayRequest>().expect("parse");
+
+        assert_eq!(
+            parsed.clone().callback("comentario", 314).to_string(),
+            "https://yuri/?o=callback&comment=comentario&amount=314"
+        );
+
+        assert_eq!(
+            parsed.callback("", 314).to_string(),
+            "https://yuri/?o=callback&amount=314"
+        );
+    }
+}

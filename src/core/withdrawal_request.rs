@@ -3,7 +3,7 @@ pub const TAG: &str = "withdrawalRequest";
 #[derive(Clone, Debug)]
 pub struct WithdrawalRequest {
     k1: String,
-    callback: crate::serde::Url,
+    callback: url::Url,
     pub description: String,
     pub min: u64,
     pub max: u64,
@@ -18,7 +18,7 @@ impl std::str::FromStr for WithdrawalRequest {
 
         Ok(WithdrawalRequest {
             k1: d.k1,
-            callback: d.callback,
+            callback: d.callback.0,
             description: d.default_description,
             min: d.min_withdrawable,
             max: d.max_withdrawable,
@@ -33,11 +33,10 @@ impl WithdrawalRequest {
     #[must_use]
     pub fn callback(mut self, pr: &str) -> url::Url {
         self.callback
-            .0
             .query_pairs_mut()
             .extend_pairs([("k1", &self.k1 as &str), ("pr", pr)]);
 
-        self.callback.0
+        self.callback
     }
 }
 
@@ -55,5 +54,49 @@ mod serde {
         pub min_withdrawable: u64,
         #[serde(rename = "maxWithdrawable")]
         pub max_withdrawable: u64,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn parse() {
+        let input = r#"
+            {
+                "k1": "caum",
+                "callback": "https://yuri?o=callback",
+                "defaultDescription": "verde com bolinhas",
+                "minWithdrawable": 314,
+                "maxWithdrawable": 315
+            }
+        "#;
+
+        let parsed = input.parse::<super::WithdrawalRequest>().expect("parse");
+
+        assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
+        assert_eq!(parsed.description, "verde com bolinhas");
+        assert_eq!(parsed.k1, "caum");
+        assert_eq!(parsed.max, 315);
+        assert_eq!(parsed.min, 314);
+    }
+
+    #[test]
+    fn callback() {
+        let input = r#"
+            {
+                "k1": "caum",
+                "callback": "https://yuri?o=callback",
+                "defaultDescription": "verde com bolinhas",
+                "minWithdrawable": 314,
+                "maxWithdrawable": 315
+            }
+        "#;
+
+        let parsed = input.parse::<super::WithdrawalRequest>().expect("parse");
+
+        assert_eq!(
+            parsed.callback("pierre").to_string(),
+            "https://yuri/?o=callback&k1=caum&pr=pierre"
+        );
     }
 }
