@@ -17,5 +17,5 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: mozilla-actions/sccache-action@v0.0.3
-      - run: cargo clippy
-      - run: cargo test
+      - run: cargo clippy --all-features
+      - run: cargo test --all-features

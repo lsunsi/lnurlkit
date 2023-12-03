@@ -26,7 +26,7 @@ impl std::str::FromStr for PayRequest {
         use base64::{prelude::BASE64_STANDARD, Engine};
         use miniserde::json::Value;
 
-        let p: serde::QueryResponse =
+        let p: de::QueryResponse =
             miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
         let comment_size = p.comment_allowed.unwrap_or(0);
 
@@ -91,6 +91,55 @@ impl std::str::FromStr for PayRequest {
     }
 }
 
+impl std::fmt::Display for PayRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use base64::{prelude::BASE64_STANDARD, Engine};
+
+        let metadata = miniserde::json::to_string(
+            &[
+                Some(("text/plain", self.short_description.clone())),
+                self.long_description
+                    .as_ref()
+                    .map(|s| ("text/long-desc", s.clone())),
+                self.jpeg
+                    .as_ref()
+                    .map(|s| ("image/jpeg;base64", BASE64_STANDARD.encode(s))),
+                self.png
+                    .as_ref()
+                    .map(|s| ("image/png;base64", BASE64_STANDARD.encode(s))),
+            ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>(),
+        );
+
+        let success_action = self.success_action.as_ref().map(|sa| {
+            let mut map = std::collections::BTreeMap::new();
+
+            match sa {
+                SuccessAction::Message(m) => {
+                    map.insert("message", m.into());
+                }
+                SuccessAction::Url(u, d) => {
+                    map.insert("description", d.into());
+                    map.insert("url", u.to_string().into());
+                }
+            }
+
+            map
+        });
+
+        f.write_str(&miniserde::json::to_string(&ser::QueryResponse {
+            metadata,
+            callback: &self.callback,
+            min_sendable: self.min,
+            max_sendable: self.max,
+            comment_allowed: self.comment_size,
+            success_action,
+        }))
+    }
+}
+
 impl PayRequest {
     /// # Errors
     ///
@@ -120,7 +169,7 @@ impl std::str::FromStr for CallbackResponse {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let a: serde::CallbackResponse =
+        let a: de::CallbackResponse =
             miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
 
         Ok(Self {
@@ -130,7 +179,27 @@ impl std::str::FromStr for CallbackResponse {
     }
 }
 
-mod serde {
+mod ser {
+    use crate::serde::Url;
+    use miniserde::Serialize;
+    use std::collections::BTreeMap;
+
+    #[derive(Serialize)]
+    pub(super) struct QueryResponse<'a> {
+        pub metadata: String,
+        pub callback: &'a Url,
+        #[serde(rename = "minSendable")]
+        pub min_sendable: u64,
+        #[serde(rename = "maxSendable")]
+        pub max_sendable: u64,
+        #[serde(rename = "commentAllowed")]
+        pub comment_allowed: u64,
+        #[serde(rename = "successAction")]
+        pub success_action: Option<BTreeMap<&'static str, std::borrow::Cow<'a, str>>>,
+    }
+}
+
+mod de {
     use crate::serde::Url;
     use miniserde::Deserialize;
     use std::collections::BTreeMap;
