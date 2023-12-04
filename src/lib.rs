@@ -1,5 +1,4 @@
-#![allow(clippy::multiple_crate_versions)]
-// socket2 from hyper and tokio
+#![cfg_attr(all(doc, docsrs), feature(doc_auto_cfg))]
 
 pub mod core;
 mod serde;

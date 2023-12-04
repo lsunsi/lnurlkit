@@ -30,6 +30,10 @@ tokio = { version = "1.0.0", features = ["macros"], default-features = false }
 client = ["dep:reqwest"]
 server = ["dep:axum"]
 
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
+all-features = true
+
 [lints.rust]
 warnings = "deny"
 
