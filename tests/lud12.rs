@@ -26,7 +26,7 @@ async fn test() {
                     })
                 }
             },
-            move |(_, comment)| async move {
+            |(_, comment)| async move {
                 Ok(lnurlkit::core::pay_request::CallbackResponse {
                     pr: format!("pierre:{comment:?}"),
                     disposable: false,

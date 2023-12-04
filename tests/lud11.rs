@@ -26,7 +26,7 @@ async fn test() {
                     })
                 }
             },
-            move |(amount, _)| async move {
+            |(amount, _)| async move {
                 Ok(lnurlkit::core::pay_request::CallbackResponse {
                     pr: String::new(),
                     disposable: amount % 2 == 0,

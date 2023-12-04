@@ -1,3 +1,5 @@
+use crate::core;
+
 #[derive(Clone, Default)]
 pub struct Client(reqwest::Client);
 
@@ -6,75 +8,49 @@ impl Client {
     ///
     /// Returns errors on network or deserialization failures.
     pub async fn query(&self, s: &str) -> Result<Query, &'static str> {
-        let url = crate::core::resolve(s)?;
+        let url = core::resolve(s)?;
 
         let client = &self.0;
         let response = client.get(url).send().await.map_err(|_| "request failed")?;
         let text = response.text().await.map_err(|_| "body failed")?;
 
-        text.parse::<crate::core::Query>()
+        text.parse::<core::Query>()
             .map_err(|_| "parse failed")
             .map(|query| match query {
-                crate::core::Query::PayRequest(core) => {
-                    Query::PayRequest(PayRequest { client, core })
-                }
-                crate::core::Query::ChannelRequest(core) => {
+                core::Query::ChannelRequest(core) => {
                     Query::ChannelRequest(ChannelRequest { client, core })
                 }
-                crate::core::Query::WithdrawRequest(core) => {
+                core::Query::WithdrawRequest(core) => {
                     Query::WithdrawRequest(WithdrawRequest { client, core })
                 }
+                core::Query::PayRequest(core) => Query::PayRequest(PayRequest { client, core }),
             })
     }
 }
 
 #[derive(Clone, Debug)]
 pub enum Query<'a> {
-    PayRequest(PayRequest<'a>),
     ChannelRequest(ChannelRequest<'a>),
     WithdrawRequest(WithdrawRequest<'a>),
-}
-
-#[derive(Clone, Debug)]
-pub struct PayRequest<'a> {
-    client: &'a reqwest::Client,
-    pub core: crate::core::pay_request::PayRequest,
+    PayRequest(PayRequest<'a>),
 }
 
 #[derive(Clone, Debug)]
 pub struct ChannelRequest<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::core::channel_request::ChannelRequest,
+    pub core: core::channel_request::ChannelRequest,
 }
 
 #[derive(Clone, Debug)]
 pub struct WithdrawRequest<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::core::withdraw_request::WithdrawRequest,
+    pub core: core::withdraw_request::WithdrawRequest,
 }
 
-impl PayRequest<'_> {
-    /// # Errors
-    ///
-    /// Returns errors on network or deserialization failures.
-    pub async fn callback(
-        self,
-        comment: &str,
-        millisatoshis: u64,
-    ) -> Result<crate::core::pay_request::CallbackResponse, &'static str> {
-        let callback = self.core.callback(comment, millisatoshis);
-
-        let response = self
-            .client
-            .get(callback)
-            .send()
-            .await
-            .map_err(|_| "request failed")?;
-
-        let text = response.text().await.map_err(|_| "body failed")?;
-
-        text.parse().map_err(|_| "parse failed")
-    }
+#[derive(Clone, Debug)]
+pub struct PayRequest<'a> {
+    client: &'a reqwest::Client,
+    pub core: core::pay_request::PayRequest,
 }
 
 impl ChannelRequest<'_> {
@@ -113,15 +89,43 @@ impl WithdrawRequest<'_> {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
-    pub async fn callback(self, pr: &str) -> Result<(), &'static str> {
+    pub async fn callback(
+        self,
+        pr: &str,
+    ) -> Result<core::withdraw_request::CallbackResponse, &'static str> {
         let callback = self.core.callback(pr);
 
-        self.client
+        let response = self
+            .client
             .get(callback)
             .send()
             .await
             .map_err(|_| "request failed")?;
 
-        Ok(())
+        let text = response.text().await.map_err(|_| "body failed")?;
+        text.parse().map_err(|_| "parse failed")
+    }
+}
+
+impl PayRequest<'_> {
+    /// # Errors
+    ///
+    /// Returns errors on network or deserialization failures.
+    pub async fn callback(
+        self,
+        comment: &str,
+        millisatoshis: u64,
+    ) -> Result<core::pay_request::CallbackResponse, &'static str> {
+        let callback = self.core.callback(comment, millisatoshis);
+
+        let response = self
+            .client
+            .get(callback)
+            .send()
+            .await
+            .map_err(|_| "request failed")?;
+
+        let text = response.text().await.map_err(|_| "body failed")?;
+        text.parse().map_err(|_| "parse failed")
     }
 }
