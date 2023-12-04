@@ -180,6 +180,17 @@ impl std::str::FromStr for CallbackResponse {
     }
 }
 
+impl std::fmt::Display for CallbackResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let cr = ser::CallbackResponse {
+            disposable: self.disposable,
+            pr: &self.pr,
+        };
+
+        f.write_str(&miniserde::json::to_string(&cr))
+    }
+}
+
 mod ser {
     use crate::serde::Url;
     use miniserde::Serialize;
@@ -198,6 +209,12 @@ mod ser {
         pub comment_allowed: u64,
         #[serde(rename = "successAction")]
         pub success_action: Option<BTreeMap<&'static str, std::borrow::Cow<'a, str>>>,
+    }
+
+    #[derive(Serialize)]
+    pub(super) struct CallbackResponse<'a> {
+        pub pr: &'a str,
+        pub disposable: bool,
     }
 }
 
