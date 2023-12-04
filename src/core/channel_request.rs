@@ -2,9 +2,35 @@ pub const TAG: &str = "channelRequest";
 
 #[derive(Clone, Debug)]
 pub struct ChannelRequest {
-    callback: url::Url,
+    pub callback: url::Url,
     pub uri: String,
-    k1: String,
+    pub k1: String,
+}
+
+impl std::str::FromStr for ChannelRequest {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let d: de::QueryResponse =
+            miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
+
+        Ok(ChannelRequest {
+            callback: d.callback.0,
+            uri: d.uri,
+            k1: d.k1,
+        })
+    }
+}
+
+impl std::fmt::Display for ChannelRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&miniserde::json::to_string(&ser::QueryResponse {
+            tag: TAG,
+            callback: crate::serde::Url(self.callback.clone()),
+            uri: &self.uri,
+            k1: &self.k1,
+        }))
+    }
 }
 
 impl ChannelRequest {
@@ -37,22 +63,61 @@ impl ChannelRequest {
     }
 }
 
-impl std::str::FromStr for ChannelRequest {
+#[derive(Debug)]
+pub enum CallbackResponse {
+    Error(String),
+    Ok,
+}
+
+impl std::str::FromStr for CallbackResponse {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let d: serde::QueryResponse =
-            miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
+        let map = miniserde::json::from_str::<std::collections::BTreeMap<String, String>>(s)
+            .map_err(|_| "bad json")?;
 
-        Ok(ChannelRequest {
-            callback: d.callback.0,
-            uri: d.uri,
-            k1: d.k1,
-        })
+        match map.get("status").map(|s| s as &str) {
+            Some("OK") => Ok(CallbackResponse::Ok),
+            Some("ERROR") => Ok(CallbackResponse::Error(
+                map.get("reason").cloned().unwrap_or_default(),
+            )),
+            _ => Err("bad status field"),
+        }
     }
 }
 
-mod serde {
+impl std::fmt::Display for CallbackResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut map = std::collections::BTreeMap::new();
+
+        match self {
+            CallbackResponse::Error(reason) => {
+                map.insert("status", "ERROR");
+                map.insert("reason", reason);
+            }
+            CallbackResponse::Ok => {
+                map.insert("status", "OK");
+            }
+        }
+
+        f.write_str(&miniserde::json::to_string(&map))
+    }
+}
+
+mod ser {
+    use crate::serde::Url;
+    use miniserde::Serialize;
+
+    #[derive(Serialize)]
+    pub(super) struct QueryResponse<'a> {
+        pub tag: &'static str,
+        pub callback: Url,
+        pub uri: &'a str,
+        pub k1: &'a str,
+    }
+}
+
+mod de {
     use crate::serde::Url;
     use miniserde::Deserialize;
 

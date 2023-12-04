@@ -2,7 +2,9 @@ use crate::core;
 use axum::{extract::RawQuery, http::StatusCode, routing::get, Router};
 use std::future::Future;
 
-pub struct Server<WQ, WC, PQ, PC> {
+pub struct Server<CQ, CC, WQ, WC, PQ, PC> {
+    channel_query: CQ,
+    channel_callback: CC,
     withdraw_query: WQ,
     withdraw_callback: WC,
     pay_query: PQ,
@@ -11,6 +13,8 @@ pub struct Server<WQ, WC, PQ, PC> {
 
 impl Default
     for Server<
+        unimplemented::Handler0<core::channel_request::ChannelRequest>,
+        unimplemented::Handler1<(String, String), core::channel_request::CallbackResponse>,
         unimplemented::Handler0<core::withdraw_request::WithdrawRequest>,
         unimplemented::Handler1<String, core::withdraw_request::CallbackResponse>,
         unimplemented::Handler0<core::pay_request::PayRequest>,
@@ -19,6 +23,8 @@ impl Default
 {
     fn default() -> Self {
         Server {
+            channel_query: unimplemented::handler0,
+            channel_callback: unimplemented::handler1,
             withdraw_query: unimplemented::handler0,
             withdraw_callback: unimplemented::handler1,
             pay_query: unimplemented::handler0,
@@ -27,13 +33,30 @@ impl Default
     }
 }
 
-impl<WQ, WC, PQ, PC> Server<WQ, WC, PQ, PC> {
+impl<CQ, CC, WQ, WC, PQ, PC> Server<CQ, CC, WQ, WC, PQ, PC> {
+    pub fn channel_request<CQ2, CC2>(
+        self,
+        channel_query: CQ2,
+        channel_callback: CC2,
+    ) -> Server<CQ2, CC2, WQ, WC, PQ, PC> {
+        Server {
+            channel_query,
+            channel_callback,
+            pay_query: self.pay_query,
+            pay_callback: self.pay_callback,
+            withdraw_query: self.withdraw_query,
+            withdraw_callback: self.withdraw_callback,
+        }
+    }
+
     pub fn withdraw_request<WQ2, WC2>(
         self,
         withdraw_query: WQ2,
         withdraw_callback: WC2,
-    ) -> Server<WQ2, WC2, PQ, PC> {
+    ) -> Server<CQ, CC, WQ2, WC2, PQ, PC> {
         Server {
+            channel_query: self.channel_query,
+            channel_callback: self.channel_callback,
             pay_query: self.pay_query,
             pay_callback: self.pay_callback,
             withdraw_query,
@@ -45,8 +68,10 @@ impl<WQ, WC, PQ, PC> Server<WQ, WC, PQ, PC> {
         self,
         pay_query: PQ2,
         pay_callback: PC2,
-    ) -> Server<WQ, WC, PQ2, PC2> {
+    ) -> Server<CQ, CC, WQ, WC, PQ2, PC2> {
         Server {
+            channel_query: self.channel_query,
+            channel_callback: self.channel_callback,
             pay_query,
             pay_callback,
             withdraw_query: self.withdraw_query,
@@ -55,8 +80,15 @@ impl<WQ, WC, PQ, PC> Server<WQ, WC, PQ, PC> {
     }
 }
 
-impl<WQ, WQFut, WC, WCFut, PQ, PQFut, PC, PCFut> Server<WQ, WC, PQ, PC>
+impl<CQ, CQFut, CC, CCFut, WQ, WQFut, WC, WCFut, PQ, PQFut, PC, PCFut>
+    Server<CQ, CC, WQ, WC, PQ, PC>
 where
+    CQ: 'static + Send + Clone + Fn() -> CQFut,
+    CQFut: Send + Future<Output = Result<core::channel_request::ChannelRequest, StatusCode>>,
+
+    CC: 'static + Send + Clone + Fn((String, String)) -> CCFut,
+    CCFut: Send + Future<Output = Result<core::channel_request::CallbackResponse, StatusCode>>,
+
     WQ: 'static + Send + Clone + Fn() -> WQFut,
     WQFut: Send + Future<Output = Result<core::withdraw_request::WithdrawRequest, StatusCode>>,
 
@@ -72,10 +104,36 @@ where
     pub fn build(self) -> Router<()> {
         Router::new()
             .route(
+                "/lnurlc",
+                get(move || {
+                    let cq = self.channel_query.clone();
+                    async move { cq().await.map(|a| a.to_string()) }
+                }),
+            )
+            .route(
+                "/lnurlc/callback",
+                get(move |RawQuery(q): RawQuery| {
+                    let cc = self.channel_callback.clone();
+                    async move {
+                        let q = q.ok_or(StatusCode::BAD_REQUEST)?;
+                        let qs = q
+                            .split('&')
+                            .filter_map(|s| s.split_once('='))
+                            .collect::<std::collections::BTreeMap<_, _>>();
+
+                        let k1 = qs.get("k1").ok_or(StatusCode::BAD_REQUEST)?;
+                        let remoteid = qs.get("remoteid").ok_or(StatusCode::BAD_REQUEST)?;
+                        cc((String::from(*k1), String::from(*remoteid)))
+                            .await
+                            .map(|a| a.to_string())
+                    }
+                }),
+            )
+            .route(
                 "/lnurlw",
                 get(move || {
-                    let pq = self.withdraw_query.clone();
-                    async move { pq().await.map(|a| a.to_string()) }
+                    let wq = self.withdraw_query.clone();
+                    async move { wq().await.map(|a| a.to_string()) }
                 }),
             )
             .route(

@@ -57,31 +57,42 @@ impl ChannelRequest<'_> {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
-    pub async fn callback_accept(self, remoteid: &str, private: bool) -> Result<(), &'static str> {
+    pub async fn callback_accept(
+        self,
+        remoteid: &str,
+        private: bool,
+    ) -> Result<core::channel_request::CallbackResponse, &'static str> {
         let callback = self.core.callback_accept(remoteid, private);
 
-        self.client
+        let response = self
+            .client
             .get(callback)
             .send()
             .await
             .map_err(|_| "request failed")?;
 
-        Ok(())
+        let text = response.text().await.map_err(|_| "body failed")?;
+        text.parse().map_err(|_| "parse failed")
     }
 
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
-    pub async fn callback_cancel(self, remoteid: &str) -> Result<(), &'static str> {
+    pub async fn callback_cancel(
+        self,
+        remoteid: &str,
+    ) -> Result<core::channel_request::CallbackResponse, &'static str> {
         let callback = self.core.callback_cancel(remoteid);
 
-        self.client
+        let response = self
+            .client
             .get(callback)
             .send()
             .await
             .map_err(|_| "request failed")?;
 
-        Ok(())
+        let text = response.text().await.map_err(|_| "body failed")?;
+        text.parse().map_err(|_| "parse failed")
     }
 }
 
