@@ -6,7 +6,7 @@ pub mod withdrawal_request;
 ///
 /// Returns error in case `s` cannot be understood.
 pub fn resolve(s: &str) -> Result<url::Url, &'static str> {
-    if s.starts_with("lnurl1") | s.starts_with("LNURL1") {
+    if s.starts_with("lnurl1") || s.starts_with("LNURL1") {
         resolve_bech32(s)
     } else if s.starts_with("lnurl") || s.starts_with("keyauth") {
         resolve_scheme(s)
