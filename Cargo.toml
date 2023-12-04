@@ -45,3 +45,7 @@ suspicious = "deny"
 [[test]]
 name = "lud06"
 required-features = ["client", "server"]
+
+[[test]]
+name = "lud12"
+required-features = ["client", "server"]
