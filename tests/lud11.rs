@@ -21,16 +21,16 @@ async fn test() {
                         success_action: None,
                         jpeg: None,
                         png: None,
-                        comment_size: 140,
+                        comment_size: 0,
                         min: 314,
                         max: 315,
                     })
                 }
             },
-            move |(_, comment)| async move {
+            move |(amount, _)| async move {
                 Ok(lnurlkit::core::pay_request::CallbackResponse {
-                    pr: format!("pierre:{comment:?}"),
-                    disposable: false,
+                    pr: String::new(),
+                    disposable: amount % 2 == 0,
                 })
             },
         )
@@ -54,11 +54,9 @@ async fn test() {
         panic!("not pay request");
     };
 
-    assert_eq!(pr.core.comment_size, 140);
-
     let invoice = pr.clone().callback("", 314).await.expect("callback");
-    assert_eq!(invoice.pr, "pierre:None");
+    assert!(invoice.disposable);
 
-    let invoice = pr.callback("comentario", 314).await.expect("callback");
-    assert_eq!(invoice.pr, "pierre:Some(\"comentario\")");
+    let invoice = pr.callback("", 315).await.expect("callback");
+    assert!(!invoice.disposable);
 }
