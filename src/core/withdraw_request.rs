@@ -1,7 +1,7 @@
-pub const TAG: &str = "withdrawalRequest";
+pub const TAG: &str = "withdrawRequest";
 
 #[derive(Clone, Debug)]
-pub struct WithdrawalRequest {
+pub struct WithdrawRequest {
     k1: String,
     callback: url::Url,
     pub description: String,
@@ -9,14 +9,14 @@ pub struct WithdrawalRequest {
     pub max: u64,
 }
 
-impl std::str::FromStr for WithdrawalRequest {
+impl std::str::FromStr for WithdrawRequest {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let d: serde::QueryResponse =
             miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
 
-        Ok(WithdrawalRequest {
+        Ok(WithdrawRequest {
             k1: d.k1,
             callback: d.callback.0,
             description: d.default_description,
@@ -26,7 +26,7 @@ impl std::str::FromStr for WithdrawalRequest {
     }
 }
 
-impl WithdrawalRequest {
+impl WithdrawRequest {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
@@ -71,7 +71,7 @@ mod tests {
             }
         "#;
 
-        let parsed = input.parse::<super::WithdrawalRequest>().expect("parse");
+        let parsed = input.parse::<super::WithdrawRequest>().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.description, "verde com bolinhas");
@@ -92,7 +92,7 @@ mod tests {
             }
         "#;
 
-        let parsed = input.parse::<super::WithdrawalRequest>().expect("parse");
+        let parsed = input.parse::<super::WithdrawRequest>().expect("parse");
 
         assert_eq!(
             parsed.callback("pierre").to_string(),

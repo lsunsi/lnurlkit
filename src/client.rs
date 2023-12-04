@@ -21,8 +21,8 @@ impl Client {
                 crate::core::Query::ChannelRequest(core) => {
                     Query::ChannelRequest(ChannelRequest { client, core })
                 }
-                crate::core::Query::WithdrawalRequest(core) => {
-                    Query::WithdrawalRequest(WithdrawalRequest { client, core })
+                crate::core::Query::WithdrawRequest(core) => {
+                    Query::WithdrawRequest(WithdrawRequest { client, core })
                 }
             })
     }
@@ -32,7 +32,7 @@ impl Client {
 pub enum Query<'a> {
     PayRequest(PayRequest<'a>),
     ChannelRequest(ChannelRequest<'a>),
-    WithdrawalRequest(WithdrawalRequest<'a>),
+    WithdrawRequest(WithdrawRequest<'a>),
 }
 
 #[derive(Clone, Debug)]
@@ -48,9 +48,9 @@ pub struct ChannelRequest<'a> {
 }
 
 #[derive(Clone, Debug)]
-pub struct WithdrawalRequest<'a> {
+pub struct WithdrawRequest<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::core::withdrawal_request::WithdrawalRequest,
+    pub core: crate::core::withdraw_request::WithdrawRequest,
 }
 
 impl PayRequest<'_> {
@@ -109,7 +109,7 @@ impl ChannelRequest<'_> {
     }
 }
 
-impl WithdrawalRequest<'_> {
+impl WithdrawRequest<'_> {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.

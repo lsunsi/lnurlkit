@@ -1,6 +1,6 @@
 pub mod channel_request;
 pub mod pay_request;
-pub mod withdrawal_request;
+pub mod withdraw_request;
 
 /// # Errors
 ///
@@ -72,7 +72,7 @@ fn resolve_address(s: &str) -> Result<url::Url, &'static str> {
 pub enum Query {
     PayRequest(pay_request::PayRequest),
     ChannelRequest(channel_request::ChannelRequest),
-    WithdrawalRequest(withdrawal_request::WithdrawalRequest),
+    WithdrawRequest(withdraw_request::WithdrawRequest),
 }
 
 impl std::str::FromStr for Query {
@@ -89,9 +89,9 @@ impl std::str::FromStr for Query {
         if tag.tag == channel_request::TAG {
             let cr = s.parse().map_err(|_| "deserialize data failed")?;
             Ok(Query::ChannelRequest(cr))
-        } else if tag.tag == withdrawal_request::TAG {
+        } else if tag.tag == withdraw_request::TAG {
             let wr = s.parse().map_err(|_| "deserialize data failed")?;
-            Ok(Query::WithdrawalRequest(wr))
+            Ok(Query::WithdrawRequest(wr))
         } else if tag.tag == pay_request::TAG {
             let pr = s.parse().map_err(|_| "deserialize data failed")?;
             Ok(Query::PayRequest(pr))
