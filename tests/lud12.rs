@@ -18,7 +18,6 @@ async fn test() {
                         callback,
                         short_description: String::new(),
                         long_description: None,
-                        success_action: None,
                         jpeg: None,
                         png: None,
                         comment_size: 140,
@@ -31,6 +30,7 @@ async fn test() {
                 Ok(lnurlkit::core::pay_request::CallbackResponse {
                     pr: format!("pierre:{comment:?}"),
                     disposable: false,
+                    success_action: None,
                 })
             },
         )

@@ -26,11 +26,22 @@ async fn test() {
                     })
                 }
             },
-            move |(amount, _)| async move {
+            move |(amount, comment): (u64, Option<String>)| async move {
                 Ok(lnurlkit::core::pay_request::CallbackResponse {
                     pr: String::new(),
-                    disposable: amount % 2 == 0,
-                    success_action: None,
+                    disposable: false,
+                    success_action: if amount == 0 {
+                        None
+                    } else if amount == 1 {
+                        Some(lnurlkit::core::pay_request::SuccessAction::Message(
+                            comment.unwrap_or_default(),
+                        ))
+                    } else {
+                        Some(lnurlkit::core::pay_request::SuccessAction::Url(
+                            url::Url::parse("http://u.rl").expect("url"),
+                            comment.unwrap_or_default(),
+                        ))
+                    },
                 })
             },
         )
@@ -54,9 +65,24 @@ async fn test() {
         panic!("not pay request");
     };
 
-    let invoice = pr.clone().callback("", 314).await.expect("callback");
-    assert!(invoice.disposable);
+    let invoice = pr.clone().callback("", 0).await.expect("callback");
+    assert!(invoice.success_action.is_none());
 
-    let invoice = pr.callback("", 315).await.expect("callback");
-    assert!(!invoice.disposable);
+    let invoice = pr.clone().callback("mensagem", 1).await.expect("callback");
+
+    let Some(lnurlkit::core::pay_request::SuccessAction::Message(m)) = invoice.success_action
+    else {
+        panic!("bad success action");
+    };
+
+    assert_eq!(m, "mensagem");
+
+    let invoice = pr.callback("descricao", 2).await.expect("callback");
+
+    let Some(lnurlkit::core::pay_request::SuccessAction::Url(u, d)) = invoice.success_action else {
+        panic!("bad success action");
+    };
+
+    assert_eq!(u.to_string(), "http://u.rl/");
+    assert_eq!(d, "descricao");
 }

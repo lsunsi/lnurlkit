@@ -18,7 +18,6 @@ async fn test() {
                         callback,
                         short_description: String::from("today i become death"),
                         long_description: Some(String::from("the destroyer of worlds")),
-                        success_action: None,
                         jpeg: None,
                         png: None,
                         comment_size: 0,
@@ -31,6 +30,7 @@ async fn test() {
                 Ok(lnurlkit::core::pay_request::CallbackResponse {
                     pr: format!("pierre:{amount}"),
                     disposable: false,
+                    success_action: None,
                 })
             },
         )
