@@ -131,7 +131,7 @@ mod de {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn parse() {
+    fn query_parse() {
         let input = r#"
             {
                 "k1": "caum",
@@ -152,6 +152,22 @@ mod tests {
     }
 
     #[test]
+    fn query_render() {
+        let query = super::Query {
+            k1: String::from("caum"),
+            callback: url::Url::parse("https://yuri?o=callback").expect("url"),
+            description: String::from("verde com bolinhas"),
+            min: 314,
+            max: 315,
+        };
+
+        assert_eq!(
+            query.to_string(),
+            r#"{"tag":"withdrawRequest","k1":"caum","callback":"https://yuri/?o=callback","defaultDescription":"verde com bolinhas","minWithdrawable":314,"maxWithdrawable":315}"#
+        );
+    }
+
+    #[test]
     fn callback() {
         let input = r#"
             {
@@ -168,6 +184,31 @@ mod tests {
         assert_eq!(
             parsed.callback("pierre").to_string(),
             "https://yuri/?o=callback&k1=caum&pr=pierre"
+        );
+    }
+
+    #[test]
+    fn callback_response_parse() {
+        assert!(matches!(
+            r#"{ "status": "OK"}"#.parse().unwrap(),
+            super::CallbackResponse::Ok
+        ));
+
+        assert!(matches!(
+            r#"{ "status": "ERROR", "reason": "razao" }"#.parse().unwrap(),
+            super::CallbackResponse::Error(r) if r == "razao"
+        ));
+    }
+
+    #[test]
+    fn callback_response_render() {
+        assert_eq!(
+            super::CallbackResponse::Ok.to_string(),
+            r#"{"status":"OK"}"#
+        );
+        assert_eq!(
+            super::CallbackResponse::Error(String::from("razao")).to_string(),
+            r#"{"reason":"razao","status":"ERROR"}"#
         );
     }
 }

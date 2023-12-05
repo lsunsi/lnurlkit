@@ -249,7 +249,7 @@ mod de {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn parse_base() {
+    fn query_parse_base() {
         let input = r#"
             {
                 "callback": "https://yuri?o=callback",
@@ -273,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_comment_size() {
+    fn query_parse_comment_size() {
         let input = r#"
             {
                 "callback": "https://yuri?o=callback",
@@ -289,7 +289,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_long_description() {
+    fn query_parse_long_description() {
         let input = r#"
             {
                 "callback": "https://yuri?o=callback",
@@ -307,7 +307,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_images() {
+    fn query_parse_images() {
         let input = r#"
             {
                 "callback": "https://yuri?o=callback",
@@ -320,6 +320,82 @@ mod tests {
         let parsed = input.parse::<super::Query>().expect("parse");
         assert_eq!(parsed.jpeg.unwrap(), b"imagembrutal");
         assert_eq!(parsed.png.unwrap(), b"fotobrutal");
+    }
+
+    #[test]
+    fn query_render_base() {
+        let query = super::Query {
+            callback: url::Url::parse("https://yuri?o=callback").expect("url"),
+            short_description: String::from("boneco do steve magal"),
+            long_description: None,
+            jpeg: None,
+            png: None,
+            comment_size: 0,
+            min: 314,
+            max: 315,
+        };
+
+        assert_eq!(
+            query.to_string(),
+            r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
+        );
+    }
+
+    #[test]
+    fn query_render_comment_size() {
+        let query = super::Query {
+            callback: url::Url::parse("https://yuri?o=callback").expect("url"),
+            short_description: String::from("boneco do steve magal"),
+            long_description: None,
+            jpeg: None,
+            png: None,
+            comment_size: 140,
+            min: 314,
+            max: 315,
+        };
+
+        assert_eq!(
+            query.to_string(),
+            r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":140}"#
+        );
+    }
+
+    #[test]
+    fn query_render_long_description() {
+        let query = super::Query {
+            callback: url::Url::parse("https://yuri?o=callback").expect("url"),
+            short_description: String::from("boneco do steve magal"),
+            long_description: Some(String::from("mochila a jato brutal incluida")),
+            jpeg: None,
+            png: None,
+            comment_size: 0,
+            min: 314,
+            max: 315,
+        };
+
+        assert_eq!(
+            query.to_string(),
+            r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"text/long-desc\",\"mochila a jato brutal incluida\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
+        );
+    }
+
+    #[test]
+    fn query_render_images() {
+        let query = super::Query {
+            callback: url::Url::parse("https://yuri?o=callback").expect("url"),
+            short_description: String::from("boneco do steve magal"),
+            long_description: None,
+            jpeg: Some(b"imagembrutal".to_vec()),
+            png: Some(b"fotobrutal".to_vec()),
+            comment_size: 0,
+            min: 314,
+            max: 315,
+        };
+
+        assert_eq!(
+            query.to_string(),
+            r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"image/jpeg;base64\",\"aW1hZ2VtYnJ1dGFs\"],[\"image/png;base64\",\"Zm90b2JydXRhbA==\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
+        );
     }
 
     #[test]
@@ -347,7 +423,7 @@ mod tests {
     }
 
     #[test]
-    fn callback_parse_base() {
+    fn callback_response_parse_base() {
         let input = r#"
             { "pr": "pierre" }
         "#;
@@ -359,7 +435,7 @@ mod tests {
     }
 
     #[test]
-    fn callback_parse_disposable() {
+    fn callback_response_parse_disposable() {
         let input = r#"
             { "pr": "", "disposable": true }
         "#;
@@ -376,7 +452,7 @@ mod tests {
     }
 
     #[test]
-    fn callback_parse_success_actions() {
+    fn callback_response_parse_success_actions() {
         let input = r#"
             { "pr": "", "successAction": { "tag": "message", "message": "obrigado!" } }
         "#;

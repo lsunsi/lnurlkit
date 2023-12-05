@@ -136,8 +136,10 @@ mod de {
 
 #[cfg(test)]
 mod tests {
+    use std::assert_eq;
+
     #[test]
-    fn parse() {
+    fn query_parse() {
         let input = r#"
             {
                 "uri": "noh@ipe:porta",
@@ -151,6 +153,18 @@ mod tests {
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.uri, "noh@ipe:porta");
         assert_eq!(parsed.k1, "caum");
+    }
+
+    #[test]
+    fn query_render() {
+        let query = super::Query {
+            callback: url::Url::parse("https://yuri/?o=callback").expect("url"),
+            uri: String::from("noh@ipe:porta"),
+            k1: String::from("caum"),
+        };
+
+        let json = r#"{"tag":"channelRequest","callback":"https://yuri/?o=callback","uri":"noh@ipe:porta","k1":"caum"}"#;
+        assert_eq!(query.to_string(), json);
     }
 
     #[test]
@@ -195,6 +209,31 @@ mod tests {
         assert_eq!(
             url.to_string(),
             "https://yuri/?o=callback&k1=caum&remoteid=idremoto&cancel=1"
+        );
+    }
+
+    #[test]
+    fn callback_response_parse() {
+        assert!(matches!(
+            r#"{ "status": "OK"}"#.parse().unwrap(),
+            super::CallbackResponse::Ok
+        ));
+
+        assert!(matches!(
+            r#"{ "status": "ERROR", "reason": "razao" }"#.parse().unwrap(),
+            super::CallbackResponse::Error(r) if r == "razao"
+        ));
+    }
+
+    #[test]
+    fn callback_response_render() {
+        assert_eq!(
+            super::CallbackResponse::Ok.to_string(),
+            r#"{"status":"OK"}"#
+        );
+        assert_eq!(
+            super::CallbackResponse::Error(String::from("razao")).to_string(),
+            r#"{"reason":"razao","status":"ERROR"}"#
         );
     }
 }
