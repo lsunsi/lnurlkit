@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3](https://github.com/lsunsi/lnurlkit/compare/v0.1.2...v0.1.3) - 2023-12-05
+
+### Added
+- *(channel)* add action to channel server callback
+- *(withdraw)* add k1 to withdraw server callback
+- *(channel)* add client/server and a test for withdraw (lud02)
+- *(withdraw)* add client/server and a test for withdraw (lud03)
+
+### Fixed
+- change bitor for logical one (typo)
+
+### Other
+- cover serializations with unit tests
+- remove nedless clone on urls serialization
+- add re-exports top level for ease of use
+- rename, reorganize, simplify, evolve
+- rename withdrawal to withdraw (so confusing)
+
 ## [0.1.2](https://github.com/lsunsi/lnurlkit/compare/v0.1.1...v0.1.2) - 2023-12-04
 
 ### Fixed
