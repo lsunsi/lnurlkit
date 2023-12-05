@@ -14,7 +14,7 @@ impl std::str::FromStr for Query {
         let d: de::Query = miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
 
         Ok(Query {
-            callback: d.callback.0,
+            callback: d.callback.0.into_owned(),
             uri: d.uri,
             k1: d.k1,
         })
@@ -25,7 +25,7 @@ impl std::fmt::Display for Query {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&miniserde::json::to_string(&ser::Query {
             tag: TAG,
-            callback: crate::serde::Url(self.callback.clone()),
+            callback: crate::serde::Url(std::borrow::Cow::Borrowed(&self.callback)),
             uri: &self.uri,
             k1: &self.k1,
         }))
@@ -116,7 +116,7 @@ mod ser {
     #[derive(Serialize)]
     pub(super) struct Query<'a> {
         pub tag: &'static str,
-        pub callback: Url,
+        pub callback: Url<'a>,
         pub uri: &'a str,
         pub k1: &'a str,
     }
@@ -128,7 +128,7 @@ mod de {
 
     #[derive(Deserialize)]
     pub(super) struct Query {
-        pub callback: Url,
+        pub callback: Url<'static>,
         pub uri: String,
         pub k1: String,
     }

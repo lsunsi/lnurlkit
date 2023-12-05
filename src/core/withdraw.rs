@@ -17,7 +17,7 @@ impl std::str::FromStr for Query {
 
         Ok(Query {
             k1: d.k1,
-            callback: d.callback.0,
+            callback: d.callback.0.into_owned(),
             description: d.default_description,
             min: d.min_withdrawable,
             max: d.max_withdrawable,
@@ -29,7 +29,7 @@ impl std::fmt::Display for Query {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&miniserde::json::to_string(&ser::Query {
             tag: TAG,
-            callback: crate::serde::Url(self.callback.clone()),
+            callback: crate::serde::Url(std::borrow::Cow::Borrowed(&self.callback)),
             default_description: &self.description,
             min_withdrawable: self.min,
             max_withdrawable: self.max,
@@ -101,7 +101,7 @@ mod ser {
     pub(super) struct Query<'a> {
         pub tag: &'static str,
         pub k1: &'a str,
-        pub callback: Url,
+        pub callback: Url<'a>,
         #[serde(rename = "defaultDescription")]
         pub default_description: &'a str,
         #[serde(rename = "minWithdrawable")]
@@ -118,7 +118,7 @@ mod de {
     #[derive(Deserialize)]
     pub(super) struct Query {
         pub k1: String,
-        pub callback: Url,
+        pub callback: Url<'static>,
         #[serde(rename = "defaultDescription")]
         pub default_description: String,
         #[serde(rename = "minWithdrawable")]

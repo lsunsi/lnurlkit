@@ -60,7 +60,7 @@ impl std::str::FromStr for Query {
             });
 
         Ok(Query {
-            callback: p.callback.0,
+            callback: p.callback.0.into_owned(),
             min: p.min_sendable,
             max: p.max_sendable,
             short_description,
@@ -97,7 +97,7 @@ impl std::fmt::Display for Query {
         f.write_str(&miniserde::json::to_string(&ser::Query {
             tag: TAG,
             metadata,
-            callback: &crate::serde::Url(self.callback.clone()),
+            callback: crate::serde::Url(std::borrow::Cow::Borrowed(&self.callback)),
             min_sendable: self.min,
             max_sendable: self.max,
             comment_allowed: self.comment_size,
@@ -202,7 +202,7 @@ mod ser {
     pub(super) struct Query<'a> {
         pub tag: &'static str,
         pub metadata: String,
-        pub callback: &'a Url,
+        pub callback: Url<'a>,
         #[serde(rename = "minSendable")]
         pub min_sendable: u64,
         #[serde(rename = "maxSendable")]
@@ -228,7 +228,7 @@ mod de {
     #[derive(Deserialize)]
     pub(super) struct Query {
         pub metadata: String,
-        pub callback: Url,
+        pub callback: Url<'static>,
         #[serde(rename = "minSendable")]
         pub min_sendable: u64,
         #[serde(rename = "maxSendable")]
