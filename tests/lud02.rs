@@ -9,12 +9,12 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlc");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlc/callback")).expect("url");
 
-    let router = lnurlkit::server::Server::default()
+    let router = lnurlkit::Server::default()
         .channel_request(
             move || {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::core::channel::Query {
+                    Ok(lnurlkit::channel::Query {
                         uri: String::from("u@r:i"),
                         k1: String::from("caum"),
                         callback,
@@ -23,9 +23,9 @@ async fn test() {
             },
             |(k1, remoteid, action)| async move {
                 Ok(if remoteid == "idremoto" {
-                    lnurlkit::core::channel::CallbackResponse::Ok
+                    lnurlkit::channel::CallbackResponse::Ok
                 } else {
-                    lnurlkit::core::channel::CallbackResponse::Error(format!("{k1}/{action:?}"))
+                    lnurlkit::channel::CallbackResponse::Error(format!("{k1}/{action:?}"))
                 })
             },
         )
@@ -35,7 +35,7 @@ async fn test() {
         axum::serve(listener, router).await.expect("serve");
     });
 
-    let client = lnurlkit::client::Client::default();
+    let client = lnurlkit::Client::default();
 
     let lnurl = bech32::encode(
         "lnurl",
@@ -57,10 +57,7 @@ async fn test() {
         .await
         .expect("callback");
 
-    assert!(matches!(
-        response,
-        lnurlkit::core::channel::CallbackResponse::Ok
-    ));
+    assert!(matches!(response, lnurlkit::channel::CallbackResponse::Ok));
 
     let response = cr
         .clone()
@@ -70,7 +67,7 @@ async fn test() {
 
     assert!(matches!(
         response,
-        lnurlkit::core::channel::CallbackResponse::Error(r) if r == "caum/Cancel"
+        lnurlkit::channel::CallbackResponse::Error(r) if r == "caum/Cancel"
     ));
 
     let response = cr
@@ -81,7 +78,7 @@ async fn test() {
 
     assert!(matches!(
         response,
-        lnurlkit::core::channel::CallbackResponse::Error(r) if r == "caum/Accept { private: true }"
+        lnurlkit::channel::CallbackResponse::Error(r) if r == "caum/Accept { private: true }"
     ));
 
     let response = cr
@@ -91,6 +88,6 @@ async fn test() {
 
     assert!(matches!(
         response,
-        lnurlkit::core::channel::CallbackResponse::Error(r) if r == "caum/Accept { private: false }"
+        lnurlkit::channel::CallbackResponse::Error(r) if r == "caum/Accept { private: false }"
     ));
 }

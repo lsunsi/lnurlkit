@@ -9,12 +9,12 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlp");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlp/callback")).expect("url");
 
-    let router = lnurlkit::server::Server::default()
+    let router = lnurlkit::Server::default()
         .pay_request(
             move || {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::core::pay::Query {
+                    Ok(lnurlkit::pay::Query {
                         callback,
                         short_description: String::new(),
                         long_description: None,
@@ -27,7 +27,7 @@ async fn test() {
                 }
             },
             |(amount, _)| async move {
-                Ok(lnurlkit::core::pay::CallbackResponse {
+                Ok(lnurlkit::pay::CallbackResponse {
                     pr: String::new(),
                     disposable: amount % 2 == 0,
                     success_action: None,
@@ -40,7 +40,7 @@ async fn test() {
         axum::serve(listener, router).await.expect("serve");
     });
 
-    let client = lnurlkit::client::Client::default();
+    let client = lnurlkit::Client::default();
 
     let lnurl = bech32::encode(
         "lnurl",

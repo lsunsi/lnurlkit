@@ -9,12 +9,12 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlw");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlw/callback")).expect("url");
 
-    let router = lnurlkit::server::Server::default()
+    let router = lnurlkit::Server::default()
         .withdraw_request(
             move || {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::core::withdraw::Query {
+                    Ok(lnurlkit::withdraw::Query {
                         description: String::from("descricao"),
                         k1: String::from("caum"),
                         callback,
@@ -25,9 +25,9 @@ async fn test() {
             },
             |(k1, pr)| async move {
                 Ok(if pr == "pierre" {
-                    lnurlkit::core::withdraw::CallbackResponse::Ok
+                    lnurlkit::withdraw::CallbackResponse::Ok
                 } else {
-                    lnurlkit::core::withdraw::CallbackResponse::Error(k1)
+                    lnurlkit::withdraw::CallbackResponse::Error(k1)
                 })
             },
         )
@@ -37,7 +37,7 @@ async fn test() {
         axum::serve(listener, router).await.expect("serve");
     });
 
-    let client = lnurlkit::client::Client::default();
+    let client = lnurlkit::Client::default();
 
     let lnurl = bech32::encode(
         "lnurl",
@@ -56,14 +56,11 @@ async fn test() {
     assert_eq!(wr.core.description, "descricao");
 
     let response = wr.clone().callback("pierre").await.expect("callback");
-    assert!(matches!(
-        response,
-        lnurlkit::core::withdraw::CallbackResponse::Ok
-    ));
+    assert!(matches!(response, lnurlkit::withdraw::CallbackResponse::Ok));
 
     let response = wr.callback("pierrado").await.expect("callback");
     assert!(matches!(
         response,
-        lnurlkit::core::withdraw::CallbackResponse::Error(r) if r == "caum"
+        lnurlkit::withdraw::CallbackResponse::Error(r) if r == "caum"
     ));
 }

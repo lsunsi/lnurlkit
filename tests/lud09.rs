@@ -9,12 +9,12 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlp");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlp/callback")).expect("url");
 
-    let router = lnurlkit::server::Server::default()
+    let router = lnurlkit::Server::default()
         .pay_request(
             move || {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::core::pay::Query {
+                    Ok(lnurlkit::pay::Query {
                         callback,
                         short_description: String::new(),
                         long_description: None,
@@ -27,17 +27,17 @@ async fn test() {
                 }
             },
             |(amount, comment): (u64, Option<String>)| async move {
-                Ok(lnurlkit::core::pay::CallbackResponse {
+                Ok(lnurlkit::pay::CallbackResponse {
                     pr: String::new(),
                     disposable: false,
                     success_action: if amount == 0 {
                         None
                     } else if amount == 1 {
-                        Some(lnurlkit::core::pay::SuccessAction::Message(
+                        Some(lnurlkit::pay::SuccessAction::Message(
                             comment.unwrap_or_default(),
                         ))
                     } else {
-                        Some(lnurlkit::core::pay::SuccessAction::Url(
+                        Some(lnurlkit::pay::SuccessAction::Url(
                             url::Url::parse("http://u.rl").expect("url"),
                             comment.unwrap_or_default(),
                         ))
@@ -51,7 +51,7 @@ async fn test() {
         axum::serve(listener, router).await.expect("serve");
     });
 
-    let client = lnurlkit::client::Client::default();
+    let client = lnurlkit::Client::default();
 
     let lnurl = bech32::encode(
         "lnurl",
@@ -70,7 +70,7 @@ async fn test() {
 
     let invoice = pr.clone().callback("mensagem", 1).await.expect("callback");
 
-    let Some(lnurlkit::core::pay::SuccessAction::Message(m)) = invoice.success_action else {
+    let Some(lnurlkit::pay::SuccessAction::Message(m)) = invoice.success_action else {
         panic!("bad success action");
     };
 
@@ -78,7 +78,7 @@ async fn test() {
 
     let invoice = pr.callback("descricao", 2).await.expect("callback");
 
-    let Some(lnurlkit::core::pay::SuccessAction::Url(u, d)) = invoice.success_action else {
+    let Some(lnurlkit::pay::SuccessAction::Url(u, d)) = invoice.success_action else {
         panic!("bad success action");
     };
 
