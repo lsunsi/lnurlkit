@@ -21,11 +21,13 @@ async fn test() {
                     })
                 }
             },
-            |(k1, remoteid)| async move {
+            |(k1, remoteid, action)| async move {
                 Ok(if remoteid == "idremoto" {
                     lnurlkit::core::channel_request::CallbackResponse::Ok
                 } else {
-                    lnurlkit::core::channel_request::CallbackResponse::Error(k1)
+                    lnurlkit::core::channel_request::CallbackResponse::Error(format!(
+                        "{k1}/{action:?}"
+                    ))
                 })
             },
         )
@@ -62,10 +64,35 @@ async fn test() {
         lnurlkit::core::channel_request::CallbackResponse::Ok
     ));
 
-    let response = cr.callback_cancel("iderrado").await.expect("callback");
+    let response = cr
+        .clone()
+        .callback_cancel("iderrado")
+        .await
+        .expect("callback");
 
     assert!(matches!(
         response,
-        lnurlkit::core::channel_request::CallbackResponse::Error(r) if r == "caum"
+        lnurlkit::core::channel_request::CallbackResponse::Error(r) if r == "caum/Cancel"
+    ));
+
+    let response = cr
+        .clone()
+        .callback_accept("iderrado", true)
+        .await
+        .expect("callback");
+
+    assert!(matches!(
+        response,
+        lnurlkit::core::channel_request::CallbackResponse::Error(r) if r == "caum/Accept { private: true }"
+    ));
+
+    let response = cr
+        .callback_accept("iderrado", false)
+        .await
+        .expect("callback");
+
+    assert!(matches!(
+        response,
+        lnurlkit::core::channel_request::CallbackResponse::Error(r) if r == "caum/Accept { private: false }"
     ));
 }

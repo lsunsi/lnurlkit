@@ -14,7 +14,10 @@ pub struct Server<CQ, CC, WQ, WC, PQ, PC> {
 impl Default
     for Server<
         unimplemented::Handler0<core::channel_request::ChannelRequest>,
-        unimplemented::Handler1<(String, String), core::channel_request::CallbackResponse>,
+        unimplemented::Handler1<
+            (String, String, core::channel_request::CallbackAction),
+            core::channel_request::CallbackResponse,
+        >,
         unimplemented::Handler0<core::withdraw_request::WithdrawRequest>,
         unimplemented::Handler1<(String, String), core::withdraw_request::CallbackResponse>,
         unimplemented::Handler0<core::pay_request::PayRequest>,
@@ -86,7 +89,10 @@ where
     CQ: 'static + Send + Clone + Fn() -> CQFut,
     CQFut: Send + Future<Output = Result<core::channel_request::ChannelRequest, StatusCode>>,
 
-    CC: 'static + Send + Clone + Fn((String, String)) -> CCFut,
+    CC: 'static
+        + Send
+        + Clone
+        + Fn((String, String, core::channel_request::CallbackAction)) -> CCFut,
     CCFut: Send + Future<Output = Result<core::channel_request::CallbackResponse, StatusCode>>,
 
     WQ: 'static + Send + Clone + Fn() -> WQFut,
@@ -123,7 +129,24 @@ where
 
                         let k1 = qs.get("k1").ok_or(StatusCode::BAD_REQUEST)?;
                         let remoteid = qs.get("remoteid").ok_or(StatusCode::BAD_REQUEST)?;
-                        let param = (String::from(*k1), String::from(*remoteid));
+                        let action = qs
+                            .get("cancel")
+                            .filter(|v| **v == "1")
+                            .map(|_| core::channel_request::CallbackAction::Cancel)
+                            .or_else(|| {
+                                qs.get("private").and_then(|v| match *v {
+                                    "0" => Some(core::channel_request::CallbackAction::Accept {
+                                        private: false,
+                                    }),
+                                    "1" => Some(core::channel_request::CallbackAction::Accept {
+                                        private: true,
+                                    }),
+                                    _ => None,
+                                })
+                            })
+                            .ok_or(StatusCode::BAD_REQUEST)?;
+
+                        let param = (String::from(*k1), String::from(*remoteid), action);
                         cc(param).await.map(|a| a.to_string())
                     }
                 }),
@@ -148,6 +171,7 @@ where
 
                         let k1 = qs.get("k1").ok_or(StatusCode::BAD_REQUEST)?;
                         let pr = qs.get("pr").ok_or(StatusCode::BAD_REQUEST)?;
+
                         let param = (String::from(*k1), String::from(*pr));
                         wc(param).await.map(|a| a.to_string())
                     }
@@ -177,6 +201,7 @@ where
                             .ok_or(StatusCode::BAD_REQUEST)?;
 
                         let comment = qs.get("comment").map(|c| String::from(*c));
+
                         pc((amount, comment)).await.map(|a| a.to_string())
                     }
                 }),
