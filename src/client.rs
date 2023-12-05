@@ -1,5 +1,3 @@
-use crate::core;
-
 #[derive(Clone, Default)]
 pub struct Client(reqwest::Client);
 
@@ -8,52 +6,48 @@ impl Client {
     ///
     /// Returns errors on network or deserialization failures.
     pub async fn query(&self, s: &str) -> Result<Query, &'static str> {
-        let url = core::resolve(s)?;
+        let url = crate::core::resolve(s)?;
 
         let client = &self.0;
         let response = client.get(url).send().await.map_err(|_| "request failed")?;
         let text = response.text().await.map_err(|_| "body failed")?;
 
-        text.parse::<core::Query>()
+        text.parse::<crate::core::Query>()
             .map_err(|_| "parse failed")
             .map(|query| match query {
-                core::Query::ChannelRequest(core) => {
-                    Query::ChannelRequest(ChannelRequest { client, core })
-                }
-                core::Query::WithdrawRequest(core) => {
-                    Query::WithdrawRequest(WithdrawRequest { client, core })
-                }
-                core::Query::PayRequest(core) => Query::PayRequest(PayRequest { client, core }),
+                crate::core::Query::Channel(core) => Query::Channel(Channel { client, core }),
+                crate::core::Query::Pay(core) => Query::Pay(Pay { client, core }),
+                crate::core::Query::Withdraw(core) => Query::Withdraw(Withdraw { client, core }),
             })
     }
 }
 
 #[derive(Clone, Debug)]
 pub enum Query<'a> {
-    ChannelRequest(ChannelRequest<'a>),
-    WithdrawRequest(WithdrawRequest<'a>),
-    PayRequest(PayRequest<'a>),
+    Channel(Channel<'a>),
+    Pay(Pay<'a>),
+    Withdraw(Withdraw<'a>),
 }
 
 #[derive(Clone, Debug)]
-pub struct ChannelRequest<'a> {
+pub struct Channel<'a> {
     client: &'a reqwest::Client,
-    pub core: core::channel_request::ChannelRequest,
+    pub core: crate::core::channel::Query,
 }
 
 #[derive(Clone, Debug)]
-pub struct WithdrawRequest<'a> {
+pub struct Pay<'a> {
     client: &'a reqwest::Client,
-    pub core: core::withdraw_request::WithdrawRequest,
+    pub core: crate::core::pay::Query,
 }
 
 #[derive(Clone, Debug)]
-pub struct PayRequest<'a> {
+pub struct Withdraw<'a> {
     client: &'a reqwest::Client,
-    pub core: core::pay_request::PayRequest,
+    pub core: crate::core::withdraw::Query,
 }
 
-impl ChannelRequest<'_> {
+impl Channel<'_> {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
@@ -61,7 +55,7 @@ impl ChannelRequest<'_> {
         self,
         remoteid: &str,
         private: bool,
-    ) -> Result<core::channel_request::CallbackResponse, &'static str> {
+    ) -> Result<crate::core::channel::CallbackResponse, &'static str> {
         let callback = self.core.callback_accept(remoteid, private);
 
         let response = self
@@ -81,7 +75,7 @@ impl ChannelRequest<'_> {
     pub async fn callback_cancel(
         self,
         remoteid: &str,
-    ) -> Result<core::channel_request::CallbackResponse, &'static str> {
+    ) -> Result<crate::core::channel::CallbackResponse, &'static str> {
         let callback = self.core.callback_cancel(remoteid);
 
         let response = self
@@ -96,15 +90,16 @@ impl ChannelRequest<'_> {
     }
 }
 
-impl WithdrawRequest<'_> {
+impl Pay<'_> {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
     pub async fn callback(
         self,
-        pr: &str,
-    ) -> Result<core::withdraw_request::CallbackResponse, &'static str> {
-        let callback = self.core.callback(pr);
+        comment: &str,
+        millisatoshis: u64,
+    ) -> Result<crate::core::pay::CallbackResponse, &'static str> {
+        let callback = self.core.callback(comment, millisatoshis);
 
         let response = self
             .client
@@ -118,16 +113,15 @@ impl WithdrawRequest<'_> {
     }
 }
 
-impl PayRequest<'_> {
+impl Withdraw<'_> {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
     pub async fn callback(
         self,
-        comment: &str,
-        millisatoshis: u64,
-    ) -> Result<core::pay_request::CallbackResponse, &'static str> {
-        let callback = self.core.callback(comment, millisatoshis);
+        pr: &str,
+    ) -> Result<crate::core::withdraw::CallbackResponse, &'static str> {
+        let callback = self.core.callback(pr);
 
         let response = self
             .client

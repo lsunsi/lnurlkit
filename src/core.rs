@@ -1,6 +1,6 @@
-pub mod channel_request;
-pub mod pay_request;
-pub mod withdraw_request;
+pub mod channel;
+pub mod pay;
+pub mod withdraw;
 
 /// # Errors
 ///
@@ -70,9 +70,9 @@ fn resolve_address(s: &str) -> Result<url::Url, &'static str> {
 
 #[derive(Debug)]
 pub enum Query {
-    PayRequest(pay_request::PayRequest),
-    ChannelRequest(channel_request::ChannelRequest),
-    WithdrawRequest(withdraw_request::WithdrawRequest),
+    Channel(channel::Query),
+    Pay(pay::Query),
+    Withdraw(withdraw::Query),
 }
 
 impl std::str::FromStr for Query {
@@ -86,15 +86,15 @@ impl std::str::FromStr for Query {
 
         let tag = miniserde::json::from_str::<Tag>(s).map_err(|_| "deserialize tag failed")?;
 
-        if tag.tag == channel_request::TAG {
+        if tag.tag == channel::TAG {
             let cr = s.parse().map_err(|_| "deserialize data failed")?;
-            Ok(Query::ChannelRequest(cr))
-        } else if tag.tag == withdraw_request::TAG {
-            let wr = s.parse().map_err(|_| "deserialize data failed")?;
-            Ok(Query::WithdrawRequest(wr))
-        } else if tag.tag == pay_request::TAG {
+            Ok(Query::Channel(cr))
+        } else if tag.tag == pay::TAG {
             let pr = s.parse().map_err(|_| "deserialize data failed")?;
-            Ok(Query::PayRequest(pr))
+            Ok(Query::Pay(pr))
+        } else if tag.tag == withdraw::TAG {
+            let wr = s.parse().map_err(|_| "deserialize data failed")?;
+            Ok(Query::Withdraw(wr))
         } else {
             Err("unknown tag")
         }

@@ -1,7 +1,7 @@
 pub const TAG: &str = "withdrawRequest";
 
 #[derive(Clone, Debug)]
-pub struct WithdrawRequest {
+pub struct Query {
     pub k1: String,
     pub callback: url::Url,
     pub description: String,
@@ -9,14 +9,13 @@ pub struct WithdrawRequest {
     pub max: u64,
 }
 
-impl std::str::FromStr for WithdrawRequest {
+impl std::str::FromStr for Query {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let d: de::QueryResponse =
-            miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
+        let d: de::Query = miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
 
-        Ok(WithdrawRequest {
+        Ok(Query {
             k1: d.k1,
             callback: d.callback.0,
             description: d.default_description,
@@ -26,9 +25,9 @@ impl std::str::FromStr for WithdrawRequest {
     }
 }
 
-impl std::fmt::Display for WithdrawRequest {
+impl std::fmt::Display for Query {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&miniserde::json::to_string(&ser::QueryResponse {
+        f.write_str(&miniserde::json::to_string(&ser::Query {
             tag: TAG,
             callback: crate::serde::Url(self.callback.clone()),
             default_description: &self.description,
@@ -39,7 +38,7 @@ impl std::fmt::Display for WithdrawRequest {
     }
 }
 
-impl WithdrawRequest {
+impl Query {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
@@ -99,7 +98,7 @@ mod ser {
     use miniserde::Serialize;
 
     #[derive(Serialize)]
-    pub(super) struct QueryResponse<'a> {
+    pub(super) struct Query<'a> {
         pub tag: &'static str,
         pub k1: &'a str,
         pub callback: Url,
@@ -117,7 +116,7 @@ mod de {
     use miniserde::Deserialize;
 
     #[derive(Deserialize)]
-    pub(super) struct QueryResponse {
+    pub(super) struct Query {
         pub k1: String,
         pub callback: Url,
         #[serde(rename = "defaultDescription")]
@@ -143,7 +142,7 @@ mod tests {
             }
         "#;
 
-        let parsed = input.parse::<super::WithdrawRequest>().expect("parse");
+        let parsed = input.parse::<super::Query>().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.description, "verde com bolinhas");
@@ -164,7 +163,7 @@ mod tests {
             }
         "#;
 
-        let parsed = input.parse::<super::WithdrawRequest>().expect("parse");
+        let parsed = input.parse::<super::Query>().expect("parse");
 
         assert_eq!(
             parsed.callback("pierre").to_string(),

@@ -1,7 +1,7 @@
 pub const TAG: &str = "payRequest";
 
 #[derive(Clone, Debug)]
-pub struct PayRequest {
+pub struct Query {
     pub callback: url::Url,
     pub short_description: String,
     pub long_description: Option<String>,
@@ -12,15 +12,14 @@ pub struct PayRequest {
     pub max: u64,
 }
 
-impl std::str::FromStr for PayRequest {
+impl std::str::FromStr for Query {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use base64::{prelude::BASE64_STANDARD, Engine};
         use miniserde::json::Value;
 
-        let p: de::QueryResponse =
-            miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
+        let p: de::Query = miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
 
         let comment_size = p.comment_allowed.unwrap_or(0);
 
@@ -60,7 +59,7 @@ impl std::str::FromStr for PayRequest {
                 _ => None,
             });
 
-        Ok(PayRequest {
+        Ok(Query {
             callback: p.callback.0,
             min: p.min_sendable,
             max: p.max_sendable,
@@ -73,7 +72,7 @@ impl std::str::FromStr for PayRequest {
     }
 }
 
-impl std::fmt::Display for PayRequest {
+impl std::fmt::Display for Query {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use base64::{prelude::BASE64_STANDARD, Engine};
 
@@ -95,7 +94,7 @@ impl std::fmt::Display for PayRequest {
             .collect::<Vec<_>>(),
         );
 
-        f.write_str(&miniserde::json::to_string(&ser::QueryResponse {
+        f.write_str(&miniserde::json::to_string(&ser::Query {
             tag: TAG,
             metadata,
             callback: &crate::serde::Url(self.callback.clone()),
@@ -106,7 +105,7 @@ impl std::fmt::Display for PayRequest {
     }
 }
 
-impl PayRequest {
+impl Query {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
@@ -200,7 +199,7 @@ mod ser {
     use std::collections::BTreeMap;
 
     #[derive(Serialize)]
-    pub(super) struct QueryResponse<'a> {
+    pub(super) struct Query<'a> {
         pub tag: &'static str,
         pub metadata: String,
         pub callback: &'a Url,
@@ -227,7 +226,7 @@ mod de {
     use std::collections::BTreeMap;
 
     #[derive(Deserialize)]
-    pub(super) struct QueryResponse {
+    pub(super) struct Query {
         pub metadata: String,
         pub callback: Url,
         #[serde(rename = "minSendable")]
@@ -260,7 +259,7 @@ mod tests {
             }
         "#;
 
-        let parsed = input.parse::<super::PayRequest>().expect("parse");
+        let parsed = input.parse::<super::Query>().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.short_description, "boneco do steve magal");
@@ -285,7 +284,7 @@ mod tests {
             }
         "#;
 
-        let parsed = input.parse::<super::PayRequest>().expect("parse");
+        let parsed = input.parse::<super::Query>().expect("parse");
         assert_eq!(parsed.comment_size, 140);
     }
 
@@ -300,7 +299,7 @@ mod tests {
             }
         "#;
 
-        let parsed = input.parse::<super::PayRequest>().expect("parse");
+        let parsed = input.parse::<super::Query>().expect("parse");
         assert_eq!(
             parsed.long_description.unwrap(),
             "mochila a jato brutal incluida"
@@ -318,7 +317,7 @@ mod tests {
             }
         "#;
 
-        let parsed = input.parse::<super::PayRequest>().expect("parse");
+        let parsed = input.parse::<super::Query>().expect("parse");
         assert_eq!(parsed.jpeg.unwrap(), b"imagembrutal");
         assert_eq!(parsed.png.unwrap(), b"fotobrutal");
     }
@@ -334,7 +333,7 @@ mod tests {
             }
         "#;
 
-        let parsed = input.parse::<super::PayRequest>().expect("parse");
+        let parsed = input.parse::<super::Query>().expect("parse");
 
         assert_eq!(
             parsed.clone().callback("comentario", 314).to_string(),

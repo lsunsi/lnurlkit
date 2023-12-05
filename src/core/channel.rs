@@ -1,20 +1,19 @@
 pub const TAG: &str = "channelRequest";
 
 #[derive(Clone, Debug)]
-pub struct ChannelRequest {
+pub struct Query {
     pub callback: url::Url,
     pub uri: String,
     pub k1: String,
 }
 
-impl std::str::FromStr for ChannelRequest {
+impl std::str::FromStr for Query {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let d: de::QueryResponse =
-            miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
+        let d: de::Query = miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
 
-        Ok(ChannelRequest {
+        Ok(Query {
             callback: d.callback.0,
             uri: d.uri,
             k1: d.k1,
@@ -22,9 +21,9 @@ impl std::str::FromStr for ChannelRequest {
     }
 }
 
-impl std::fmt::Display for ChannelRequest {
+impl std::fmt::Display for Query {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&miniserde::json::to_string(&ser::QueryResponse {
+        f.write_str(&miniserde::json::to_string(&ser::Query {
             tag: TAG,
             callback: crate::serde::Url(self.callback.clone()),
             uri: &self.uri,
@@ -33,7 +32,7 @@ impl std::fmt::Display for ChannelRequest {
     }
 }
 
-impl ChannelRequest {
+impl Query {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
@@ -115,7 +114,7 @@ mod ser {
     use miniserde::Serialize;
 
     #[derive(Serialize)]
-    pub(super) struct QueryResponse<'a> {
+    pub(super) struct Query<'a> {
         pub tag: &'static str,
         pub callback: Url,
         pub uri: &'a str,
@@ -128,7 +127,7 @@ mod de {
     use miniserde::Deserialize;
 
     #[derive(Deserialize)]
-    pub(super) struct QueryResponse {
+    pub(super) struct Query {
         pub callback: Url,
         pub uri: String,
         pub k1: String,
@@ -147,7 +146,7 @@ mod tests {
             }
         "#;
 
-        let parsed = input.parse::<super::ChannelRequest>().expect("parse");
+        let parsed = input.parse::<super::Query>().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.uri, "noh@ipe:porta");
@@ -164,7 +163,7 @@ mod tests {
             }
         "#;
 
-        let parsed = input.parse::<super::ChannelRequest>().expect("parse");
+        let parsed = input.parse::<super::Query>().expect("parse");
         let url = parsed.clone().callback_accept("idremoto", true);
 
         assert_eq!(
@@ -190,7 +189,7 @@ mod tests {
             }
         "#;
 
-        let parsed = input.parse::<super::ChannelRequest>().expect("parse");
+        let parsed = input.parse::<super::Query>().expect("parse");
         let url = parsed.callback_cancel("idremoto");
 
         assert_eq!(

@@ -14,7 +14,7 @@ async fn test() {
             move || {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::core::pay_request::PayRequest {
+                    Ok(lnurlkit::core::pay::Query {
                         callback,
                         short_description: String::new(),
                         long_description: None,
@@ -27,7 +27,7 @@ async fn test() {
                 }
             },
             |(_, comment)| async move {
-                Ok(lnurlkit::core::pay_request::CallbackResponse {
+                Ok(lnurlkit::core::pay::CallbackResponse {
                     pr: format!("pierre:{comment:?}"),
                     disposable: false,
                     success_action: None,
@@ -50,7 +50,7 @@ async fn test() {
     .expect("lnurl");
 
     let queried = client.query(&lnurl).await.expect("query");
-    let lnurlkit::client::Query::PayRequest(pr) = queried else {
+    let lnurlkit::client::Query::Pay(pr) = queried else {
         panic!("not pay request");
     };
 
