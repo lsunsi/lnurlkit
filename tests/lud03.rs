@@ -23,11 +23,11 @@ async fn test() {
                     })
                 }
             },
-            |pr| async move {
+            |(k1, pr)| async move {
                 Ok(if pr == "pierre" {
                     lnurlkit::core::withdraw_request::CallbackResponse::Ok
                 } else {
-                    lnurlkit::core::withdraw_request::CallbackResponse::Error(pr)
+                    lnurlkit::core::withdraw_request::CallbackResponse::Error(k1)
                 })
             },
         )
@@ -64,6 +64,6 @@ async fn test() {
     let response = wr.callback("pierrado").await.expect("callback");
     assert!(matches!(
         response,
-        lnurlkit::core::withdraw_request::CallbackResponse::Error(r) if r == "pierrado"
+        lnurlkit::core::withdraw_request::CallbackResponse::Error(r) if r == "caum"
     ));
 }

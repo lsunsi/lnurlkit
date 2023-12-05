@@ -16,7 +16,7 @@ impl Default
         unimplemented::Handler0<core::channel_request::ChannelRequest>,
         unimplemented::Handler1<(String, String), core::channel_request::CallbackResponse>,
         unimplemented::Handler0<core::withdraw_request::WithdrawRequest>,
-        unimplemented::Handler1<String, core::withdraw_request::CallbackResponse>,
+        unimplemented::Handler1<(String, String), core::withdraw_request::CallbackResponse>,
         unimplemented::Handler0<core::pay_request::PayRequest>,
         unimplemented::Handler1<(u64, Option<String>), core::pay_request::CallbackResponse>,
     >
@@ -92,7 +92,7 @@ where
     WQ: 'static + Send + Clone + Fn() -> WQFut,
     WQFut: Send + Future<Output = Result<core::withdraw_request::WithdrawRequest, StatusCode>>,
 
-    WC: 'static + Send + Clone + Fn(String) -> WCFut,
+    WC: 'static + Send + Clone + Fn((String, String)) -> WCFut,
     WCFut: Send + Future<Output = Result<core::withdraw_request::CallbackResponse, StatusCode>>,
 
     PQ: 'static + Send + Clone + Fn() -> PQFut,
@@ -123,9 +123,8 @@ where
 
                         let k1 = qs.get("k1").ok_or(StatusCode::BAD_REQUEST)?;
                         let remoteid = qs.get("remoteid").ok_or(StatusCode::BAD_REQUEST)?;
-                        cc((String::from(*k1), String::from(*remoteid)))
-                            .await
-                            .map(|a| a.to_string())
+                        let param = (String::from(*k1), String::from(*remoteid));
+                        cc(param).await.map(|a| a.to_string())
                     }
                 }),
             )
@@ -147,8 +146,10 @@ where
                             .filter_map(|s| s.split_once('='))
                             .collect::<std::collections::BTreeMap<_, _>>();
 
+                        let k1 = qs.get("k1").ok_or(StatusCode::BAD_REQUEST)?;
                         let pr = qs.get("pr").ok_or(StatusCode::BAD_REQUEST)?;
-                        wc(String::from(*pr)).await.map(|a| a.to_string())
+                        let param = (String::from(*k1), String::from(*pr));
+                        wc(param).await.map(|a| a.to_string())
                     }
                 }),
             )
@@ -176,7 +177,6 @@ where
                             .ok_or(StatusCode::BAD_REQUEST)?;
 
                         let comment = qs.get("comment").map(|c| String::from(*c));
-
                         pc((amount, comment)).await.map(|a| a.to_string())
                     }
                 }),
