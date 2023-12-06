@@ -24,6 +24,7 @@ async fn test() {
                         max: 315,
                         identifier: identifier.clone().filter(|i| i.starts_with('n')),
                         email: identifier.filter(|i| i.starts_with('j')),
+                        metadata_raw: None,
                     })
                 }
             },

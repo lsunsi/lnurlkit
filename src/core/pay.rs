@@ -12,6 +12,7 @@ pub struct Query {
     pub comment_size: Option<u64>,
     pub min: u64,
     pub max: u64,
+    pub metadata_raw: Option<String>,
 }
 
 impl std::str::FromStr for Query {
@@ -76,6 +77,7 @@ impl std::str::FromStr for Query {
             });
 
         Ok(Query {
+            metadata_raw: Some(p.metadata),
             callback: p.callback.0.into_owned(),
             comment_size: p.comment_allowed,
             min: p.min_sendable,
@@ -275,7 +277,7 @@ mod tests {
         let input = r#"
             {
                 "callback": "https://yuri?o=callback",
-                "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
+                "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/crazy\", \"👋🇧🇴💾\"]]",
                 "maxSendable": 315,
                 "minSendable": 314
             }
@@ -285,6 +287,10 @@ mod tests {
 
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.short_description, "boneco do steve magal");
+        assert_eq!(
+            parsed.metadata_raw.unwrap(),
+            "[[\"text/plain\", \"boneco do steve magal\"],[\"text/crazy\", \"👋🇧🇴💾\"]]"
+        );
         assert_eq!(parsed.min, 314);
         assert_eq!(parsed.max, 315);
 
@@ -389,6 +395,7 @@ mod tests {
             max: 315,
             identifier: None,
             email: None,
+            metadata_raw: None,
         };
 
         assert_eq!(
@@ -410,6 +417,7 @@ mod tests {
             max: 315,
             identifier: None,
             email: None,
+            metadata_raw: None,
         };
 
         assert_eq!(
@@ -431,6 +439,7 @@ mod tests {
             max: 315,
             identifier: None,
             email: None,
+            metadata_raw: None,
         };
 
         assert_eq!(
@@ -452,6 +461,7 @@ mod tests {
             max: 315,
             identifier: None,
             email: None,
+            metadata_raw: None,
         };
 
         assert_eq!(
@@ -473,6 +483,7 @@ mod tests {
             max: 315,
             identifier: Some(String::from("steve@magal.brutal")),
             email: None,
+            metadata_raw: None,
         };
 
         assert_eq!(
@@ -494,6 +505,7 @@ mod tests {
             max: 315,
             identifier: None,
             email: Some(String::from("steve@magal.brutal")),
+            metadata_raw: None,
         };
 
         assert_eq!(

@@ -25,6 +25,7 @@ async fn test() {
                         max: 315,
                         identifier: None,
                         email: None,
+                        metadata_raw: None,
                     })
                 }
             },
