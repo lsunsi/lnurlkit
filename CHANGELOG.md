@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4](https://github.com/lsunsi/lnurlkit/compare/v0.1.3...v0.1.4) - 2023-12-06
+
+### Added
+- *(pay)* add support for lud16 (pay to identifier)
+
+### Other
+- add test for lud01 (even thought it's redundant)
+- add test with real world payreq parsing
+
 ## [0.1.3](https://github.com/lsunsi/lnurlkit/compare/v0.1.2...v0.1.3) - 2023-12-05
 
 ### Added
