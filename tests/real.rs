@@ -14,7 +14,7 @@ mod pay_request {
         assert_eq!(pr.short_description, "Sats for lorenzo");
         assert!(pr.long_description.is_none());
 
-        assert_eq!(pr.comment_size, 255);
+        assert_eq!(pr.comment_size, Some(255));
         assert_eq!(pr.max, 500_000_000);
         assert_eq!(pr.min, 1000);
 
@@ -37,7 +37,7 @@ mod pay_request {
         assert_eq!(pr.short_description, "Payment to lorenzo");
         assert!(pr.long_description.is_none());
 
-        assert_eq!(pr.comment_size, 2000);
+        assert_eq!(pr.comment_size, Some(2000));
         assert_eq!(pr.max, 100_000_000_000);
         assert_eq!(pr.min, 1000);
 
@@ -57,7 +57,7 @@ mod pay_request {
         assert_eq!(pr.short_description, "$kenu ⚡ bipa.app");
         assert!(pr.long_description.is_none());
 
-        assert_eq!(pr.comment_size, 140);
+        assert_eq!(pr.comment_size, Some(140));
         assert_eq!(pr.max, 1_000_000_000);
         assert_eq!(pr.min, 1000);
 
@@ -80,7 +80,7 @@ mod pay_request {
         assert_eq!(pr.short_description, "Lightning payment to ethan@pouch.ph");
         assert!(pr.long_description.is_none());
 
-        assert_eq!(pr.comment_size, 150);
+        assert_eq!(pr.comment_size, Some(150));
         assert_eq!(pr.max, 10_000_000_000);
         assert_eq!(pr.min, 1000);
 
@@ -103,7 +103,7 @@ mod pay_request {
         );
         assert!(pr.long_description.is_none());
 
-        assert_eq!(pr.comment_size, 255);
+        assert_eq!(pr.comment_size, Some(255));
         assert_eq!(pr.max, 100_000_000_000);
         assert_eq!(pr.min, 1000);
 
@@ -126,7 +126,7 @@ mod pay_request {
         assert_eq!(pr.short_description, "luhack - Welcome to my zbd.gg page!");
         assert!(pr.long_description.is_none());
 
-        assert_eq!(pr.comment_size, 150);
+        assert_eq!(pr.comment_size, Some(150));
         assert_eq!(pr.max, 500_000_000);
         assert_eq!(pr.min, 1000);
 

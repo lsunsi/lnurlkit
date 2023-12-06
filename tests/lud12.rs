@@ -20,7 +20,7 @@ async fn test() {
                         long_description: None,
                         jpeg: None,
                         png: None,
-                        comment_size: 140,
+                        comment_size: Some(140),
                         min: 314,
                         max: 315,
                         identifier: None,
@@ -56,7 +56,7 @@ async fn test() {
         panic!("not pay request");
     };
 
-    assert_eq!(pr.core.comment_size, 140);
+    assert_eq!(pr.core.comment_size.unwrap(), 140);
 
     let invoice = pr.clone().callback("", 314).await.expect("callback");
     assert_eq!(invoice.pr, "pierre:None");

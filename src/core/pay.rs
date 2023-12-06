@@ -9,7 +9,7 @@ pub struct Query {
     pub email: Option<String>,
     pub jpeg: Option<Vec<u8>>,
     pub png: Option<Vec<u8>>,
-    pub comment_size: u64,
+    pub comment_size: Option<u64>,
     pub min: u64,
     pub max: u64,
 }
@@ -22,8 +22,6 @@ impl std::str::FromStr for Query {
         use miniserde::json::Value;
 
         let p: de::Query = miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
-
-        let comment_size = p.comment_allowed.unwrap_or(0);
 
         let metadata = miniserde::json::from_str::<Vec<(String, Value)>>(&p.metadata)
             .map_err(|_| "deserialize metadata failed")?;
@@ -79,11 +77,11 @@ impl std::str::FromStr for Query {
 
         Ok(Query {
             callback: p.callback.0.into_owned(),
+            comment_size: p.comment_allowed,
             min: p.min_sendable,
             max: p.max_sendable,
             short_description,
             long_description,
-            comment_size,
             identifier,
             email,
             jpeg,
@@ -124,7 +122,7 @@ impl std::fmt::Display for Query {
             callback: crate::serde::Url(std::borrow::Cow::Borrowed(&self.callback)),
             min_sendable: self.min,
             max_sendable: self.max,
-            comment_allowed: self.comment_size,
+            comment_allowed: self.comment_size.unwrap_or(0),
         }))
     }
 }
@@ -290,7 +288,7 @@ mod tests {
         assert_eq!(parsed.min, 314);
         assert_eq!(parsed.max, 315);
 
-        assert_eq!(parsed.comment_size, 0);
+        assert!(parsed.comment_size.is_none());
         assert!(parsed.long_description.is_none());
         assert!(parsed.jpeg.is_none());
         assert!(parsed.png.is_none());
@@ -311,7 +309,7 @@ mod tests {
         "#;
 
         let parsed = input.parse::<super::Query>().expect("parse");
-        assert_eq!(parsed.comment_size, 140);
+        assert_eq!(parsed.comment_size.unwrap(), 140);
     }
 
     #[test]
@@ -386,7 +384,7 @@ mod tests {
             long_description: None,
             jpeg: None,
             png: None,
-            comment_size: 0,
+            comment_size: None,
             min: 314,
             max: 315,
             identifier: None,
@@ -407,7 +405,7 @@ mod tests {
             long_description: None,
             jpeg: None,
             png: None,
-            comment_size: 140,
+            comment_size: Some(140),
             min: 314,
             max: 315,
             identifier: None,
@@ -428,7 +426,7 @@ mod tests {
             long_description: Some(String::from("mochila a jato brutal incluida")),
             jpeg: None,
             png: None,
-            comment_size: 0,
+            comment_size: None,
             min: 314,
             max: 315,
             identifier: None,
@@ -449,7 +447,7 @@ mod tests {
             long_description: None,
             jpeg: Some(b"imagembrutal".to_vec()),
             png: Some(b"fotobrutal".to_vec()),
-            comment_size: 0,
+            comment_size: None,
             min: 314,
             max: 315,
             identifier: None,
@@ -470,7 +468,7 @@ mod tests {
             long_description: None,
             jpeg: Some(b"imagembrutal".to_vec()),
             png: Some(b"fotobrutal".to_vec()),
-            comment_size: 0,
+            comment_size: None,
             min: 314,
             max: 315,
             identifier: Some(String::from("steve@magal.brutal")),
@@ -491,7 +489,7 @@ mod tests {
             long_description: None,
             jpeg: Some(b"imagembrutal".to_vec()),
             png: Some(b"fotobrutal".to_vec()),
-            comment_size: 0,
+            comment_size: None,
             min: 314,
             max: 315,
             identifier: None,

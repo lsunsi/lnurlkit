@@ -19,7 +19,7 @@ async fn test() {
                         long_description: Some(String::from("the destroyer of worlds")),
                         jpeg: None,
                         png: None,
-                        comment_size: 0,
+                        comment_size: None,
                         min: 314,
                         max: 315,
                         identifier: identifier.clone().filter(|i| i.starts_with('n')),
