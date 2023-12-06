@@ -6,12 +6,11 @@ async fn test() {
 
     let addr = listener.local_addr().expect("addr");
 
-    let query_url = format!("http://{addr}/lnurlp");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlp/callback")).expect("url");
 
     let router = lnurlkit::Server::default()
         .pay_request(
-            move |_| {
+            move |identifier: Option<String>| {
                 let callback = callback_url.clone();
                 async {
                     Ok(lnurlkit::pay::Query {
@@ -23,8 +22,8 @@ async fn test() {
                         comment_size: 0,
                         min: 314,
                         max: 315,
-                        identifier: None,
-                        email: None,
+                        identifier: identifier.clone().filter(|i| i.starts_with('n')),
+                        email: identifier.filter(|i| i.starts_with('j')),
                     })
                 }
             },
@@ -44,26 +43,39 @@ async fn test() {
 
     let client = lnurlkit::Client::default();
 
-    let lnurl = bech32::encode(
+    let lnaddr = format!("nico@{addr}");
+    let mut lnurl = lnurlkit::resolve(&lnaddr).expect("resolve");
+    lnurl.set_scheme("http").expect("scheme");
+
+    let bech32 = bech32::encode(
         "lnurl",
-        bech32::ToBase32::to_base32(&query_url),
+        bech32::ToBase32::to_base32(&lnurl.as_ref()),
         bech32::Variant::Bech32,
     )
-    .expect("lnurl");
+    .expect("bech32");
 
-    let queried = client.query(&lnurl).await.expect("query");
+    let queried = client.query(&bech32).await.expect("query");
     let lnurlkit::client::Query::Pay(pr) = queried else {
         panic!("not pay request");
     };
 
-    assert_eq!(pr.core.min, 314);
-    assert_eq!(pr.core.max, 315);
-    assert_eq!(pr.core.short_description, "today i become death");
-    assert_eq!(
-        pr.core.long_description.as_ref().unwrap(),
-        "the destroyer of worlds"
-    );
+    assert_eq!(pr.core.identifier.unwrap(), "nico");
 
-    let invoice = pr.callback("comment", 314).await.expect("callback");
-    assert_eq!(invoice.pr, "pierre:314");
+    let lnaddr = format!("jorel@{addr}");
+    let mut lnurl = lnurlkit::resolve(&lnaddr).expect("resolve");
+    lnurl.set_scheme("http").expect("scheme");
+
+    let bech32 = bech32::encode(
+        "lnurl",
+        bech32::ToBase32::to_base32(&lnurl.as_ref()),
+        bech32::Variant::Bech32,
+    )
+    .expect("bech32");
+
+    let queried = client.query(&bech32).await.expect("query");
+    let lnurlkit::client::Query::Pay(pr) = queried else {
+        panic!("not pay request");
+    };
+
+    assert_eq!(pr.core.email.unwrap(), "jorel");
 }

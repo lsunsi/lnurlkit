@@ -11,7 +11,7 @@ async fn test() {
 
     let router = lnurlkit::Server::default()
         .withdraw_request(
-            move || {
+            move |()| {
                 let callback = callback_url.clone();
                 async {
                     Ok(lnurlkit::withdraw::Query {

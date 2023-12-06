@@ -5,6 +5,8 @@ pub struct Query {
     pub callback: url::Url,
     pub short_description: String,
     pub long_description: Option<String>,
+    pub identifier: Option<String>,
+    pub email: Option<String>,
     pub jpeg: Option<Vec<u8>>,
     pub png: Option<Vec<u8>>,
     pub comment_size: u64,
@@ -59,6 +61,22 @@ impl std::str::FromStr for Query {
                 _ => None,
             });
 
+        let identifier = metadata
+            .iter()
+            .find_map(|(k, v)| (k == "text/identifier").then_some(v))
+            .and_then(|v| match v {
+                Value::String(s) => Some(String::from(s)),
+                _ => None,
+            });
+
+        let email = metadata
+            .iter()
+            .find_map(|(k, v)| (k == "text/email").then_some(v))
+            .and_then(|v| match v {
+                Value::String(s) => Some(String::from(s)),
+                _ => None,
+            });
+
         Ok(Query {
             callback: p.callback.0.into_owned(),
             min: p.min_sendable,
@@ -66,6 +84,8 @@ impl std::str::FromStr for Query {
             short_description,
             long_description,
             comment_size,
+            identifier,
+            email,
             jpeg,
             png,
         })
@@ -88,6 +108,10 @@ impl std::fmt::Display for Query {
                 self.png
                     .as_ref()
                     .map(|s| ("image/png;base64", BASE64_STANDARD.encode(s))),
+                self.identifier
+                    .as_ref()
+                    .map(|s| ("text/identifier", s.clone())),
+                self.email.as_ref().map(|s| ("text/email", s.clone())),
             ]
             .into_iter()
             .flatten()
@@ -270,6 +294,8 @@ mod tests {
         assert!(parsed.long_description.is_none());
         assert!(parsed.jpeg.is_none());
         assert!(parsed.png.is_none());
+        assert!(parsed.identifier.is_none());
+        assert!(parsed.email.is_none());
     }
 
     #[test]
@@ -323,6 +349,36 @@ mod tests {
     }
 
     #[test]
+    fn query_parse_identifier() {
+        let input = r#"
+            {
+                "callback": "https://yuri?o=callback",
+                "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/identifier\", \"steve@magal.brutal\"]]",
+                "maxSendable": 315,
+                "minSendable": 314
+            }
+        "#;
+
+        let parsed = input.parse::<super::Query>().expect("parse");
+        assert_eq!(parsed.identifier.unwrap(), "steve@magal.brutal");
+    }
+
+    #[test]
+    fn query_parse_email() {
+        let input = r#"
+            {
+                "callback": "https://yuri?o=callback",
+                "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/email\", \"steve@magal.brutal\"]]",
+                "maxSendable": 315,
+                "minSendable": 314
+            }
+        "#;
+
+        let parsed = input.parse::<super::Query>().expect("parse");
+        assert_eq!(parsed.email.unwrap(), "steve@magal.brutal");
+    }
+
+    #[test]
     fn query_render_base() {
         let query = super::Query {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
@@ -333,6 +389,8 @@ mod tests {
             comment_size: 0,
             min: 314,
             max: 315,
+            identifier: None,
+            email: None,
         };
 
         assert_eq!(
@@ -352,6 +410,8 @@ mod tests {
             comment_size: 140,
             min: 314,
             max: 315,
+            identifier: None,
+            email: None,
         };
 
         assert_eq!(
@@ -371,6 +431,8 @@ mod tests {
             comment_size: 0,
             min: 314,
             max: 315,
+            identifier: None,
+            email: None,
         };
 
         assert_eq!(
@@ -390,11 +452,55 @@ mod tests {
             comment_size: 0,
             min: 314,
             max: 315,
+            identifier: None,
+            email: None,
         };
 
         assert_eq!(
             query.to_string(),
             r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"image/jpeg;base64\",\"aW1hZ2VtYnJ1dGFs\"],[\"image/png;base64\",\"Zm90b2JydXRhbA==\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
+        );
+    }
+
+    #[test]
+    fn query_render_identifier() {
+        let query = super::Query {
+            callback: url::Url::parse("https://yuri?o=callback").expect("url"),
+            short_description: String::from("boneco do steve magal"),
+            long_description: None,
+            jpeg: Some(b"imagembrutal".to_vec()),
+            png: Some(b"fotobrutal".to_vec()),
+            comment_size: 0,
+            min: 314,
+            max: 315,
+            identifier: Some(String::from("steve@magal.brutal")),
+            email: None,
+        };
+
+        assert_eq!(
+            query.to_string(),
+            r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"image/jpeg;base64\",\"aW1hZ2VtYnJ1dGFs\"],[\"image/png;base64\",\"Zm90b2JydXRhbA==\"],[\"text/identifier\",\"steve@magal.brutal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
+        );
+    }
+
+    #[test]
+    fn query_render_email() {
+        let query = super::Query {
+            callback: url::Url::parse("https://yuri?o=callback").expect("url"),
+            short_description: String::from("boneco do steve magal"),
+            long_description: None,
+            jpeg: Some(b"imagembrutal".to_vec()),
+            png: Some(b"fotobrutal".to_vec()),
+            comment_size: 0,
+            min: 314,
+            max: 315,
+            identifier: None,
+            email: Some(String::from("steve@magal.brutal")),
+        };
+
+        assert_eq!(
+            query.to_string(),
+            r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"image/jpeg;base64\",\"aW1hZ2VtYnJ1dGFs\"],[\"image/png;base64\",\"Zm90b2JydXRhbA==\"],[\"text/email\",\"steve@magal.brutal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
         );
     }
 

@@ -1,4 +1,4 @@
-use axum::{extract::RawQuery, http::StatusCode, routing::get, Router};
+use axum::{extract::Path, extract::RawQuery, http::StatusCode, routing::get, Router};
 use std::future::Future;
 
 pub struct Server<CQ, CC, PQ, PC, WQ, WC> {
@@ -13,29 +13,29 @@ pub struct Server<CQ, CC, PQ, PC, WQ, WC> {
 impl Default
     for Server<
         // Channel Request
-        unimplemented::Query<crate::core::channel::Query>,
-        unimplemented::Callback<
+        unimplemented::Handler<(), crate::core::channel::Query>,
+        unimplemented::Handler<
             (String, String, crate::core::channel::CallbackAction),
             crate::core::channel::CallbackResponse,
         >,
         // Pay Request
-        unimplemented::Query<crate::core::pay::Query>,
-        unimplemented::Callback<(u64, Option<String>), crate::core::pay::CallbackResponse>,
+        unimplemented::Handler<Option<String>, crate::core::pay::Query>,
+        unimplemented::Handler<(u64, Option<String>), crate::core::pay::CallbackResponse>,
         // Withdraw Request
-        unimplemented::Query<crate::core::withdraw::Query>,
-        unimplemented::Callback<(String, String), crate::core::withdraw::CallbackResponse>,
+        unimplemented::Handler<(), crate::core::withdraw::Query>,
+        unimplemented::Handler<(String, String), crate::core::withdraw::CallbackResponse>,
     >
 {
     fn default() -> Self {
         Server {
-            channel_query: unimplemented::query,
-            channel_callback: unimplemented::callback,
+            channel_query: unimplemented::handler,
+            channel_callback: unimplemented::handler,
 
-            pay_query: unimplemented::query,
-            pay_callback: unimplemented::callback,
+            pay_query: unimplemented::handler,
+            pay_callback: unimplemented::handler,
 
-            withdraw_query: unimplemented::query,
-            withdraw_callback: unimplemented::callback,
+            withdraw_query: unimplemented::handler,
+            withdraw_callback: unimplemented::handler,
         }
     }
 }
@@ -90,7 +90,7 @@ impl<CQ, CC, PQ, PC, WQ, WC> Server<CQ, CC, PQ, PC, WQ, WC> {
 impl<CQ, CQFut, CC, CCFut, PQ, PQFut, PC, PCFut, WQ, WQFut, WC, WCFut>
     Server<CQ, CC, PQ, PC, WQ, WC>
 where
-    CQ: 'static + Send + Clone + Fn() -> CQFut,
+    CQ: 'static + Send + Clone + Fn(()) -> CQFut,
     CQFut: Send + Future<Output = Result<crate::core::channel::Query, StatusCode>>,
 
     CC: 'static
@@ -99,25 +99,26 @@ where
         + Fn((String, String, crate::core::channel::CallbackAction)) -> CCFut,
     CCFut: Send + Future<Output = Result<crate::core::channel::CallbackResponse, StatusCode>>,
 
-    PQ: 'static + Send + Clone + Fn() -> PQFut,
+    PQ: 'static + Send + Clone + Fn(Option<String>) -> PQFut,
     PQFut: Send + Future<Output = Result<crate::core::pay::Query, StatusCode>>,
 
     PC: 'static + Send + Clone + Fn((u64, Option<String>)) -> PCFut,
     PCFut: Send + Future<Output = Result<crate::core::pay::CallbackResponse, StatusCode>>,
 
-    WQ: 'static + Send + Clone + Fn() -> WQFut,
+    WQ: 'static + Send + Clone + Fn(()) -> WQFut,
     WQFut: Send + Future<Output = Result<crate::core::withdraw::Query, StatusCode>>,
 
     WC: 'static + Send + Clone + Fn((String, String)) -> WCFut,
     WCFut: Send + Future<Output = Result<crate::core::withdraw::CallbackResponse, StatusCode>>,
 {
+    #[allow(clippy::too_many_lines)]
     pub fn build(self) -> Router<()> {
         Router::new()
             .route(
                 "/lnurlc",
                 get(move || {
                     let cq = self.channel_query.clone();
-                    async move { cq().await.map(|a| a.to_string()) }
+                    async move { cq(()).await.map(|a| a.to_string()) }
                 }),
             )
             .route(
@@ -156,10 +157,20 @@ where
                 }),
             )
             .route(
+                "/.well-known/lnurlp/:identifier",
+                get({
+                    let pq = self.pay_query.clone();
+                    move |Path(identifier): Path<String>| {
+                        let pq = pq.clone();
+                        async move { pq(Some(identifier)).await.map(|a| a.to_string()) }
+                    }
+                }),
+            )
+            .route(
                 "/lnurlp",
                 get(move || {
                     let pq = self.pay_query.clone();
-                    async move { pq().await.map(|a| a.to_string()) }
+                    async move { pq(None).await.map(|a| a.to_string()) }
                 }),
             )
             .route(
@@ -188,7 +199,7 @@ where
                 "/lnurlw",
                 get(move || {
                     let wq = self.withdraw_query.clone();
-                    async move { wq().await.map(|a| a.to_string()) }
+                    async move { wq(()).await.map(|a| a.to_string()) }
                 }),
             )
             .route(
@@ -222,13 +233,8 @@ mod unimplemented {
         task::{Context, Poll},
     };
 
-    pub(super) type Query<Ret> = fn() -> Unimplemented<Ret>;
-    pub(super) fn query<T>() -> Unimplemented<T> {
-        Unimplemented(PhantomData)
-    }
-
-    pub(super) type Callback<Param, Ret> = fn(Param) -> Unimplemented<Ret>;
-    pub(super) fn callback<T, T1>(_: T1) -> Unimplemented<T> {
+    pub(super) type Handler<Param, Ret> = fn(Param) -> Unimplemented<Ret>;
+    pub(super) fn handler<Param, Ret>(_: Param) -> Unimplemented<Ret> {
         Unimplemented(PhantomData)
     }
 

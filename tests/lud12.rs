@@ -11,7 +11,7 @@ async fn test() {
 
     let router = lnurlkit::Server::default()
         .pay_request(
-            move || {
+            move |_| {
                 let callback = callback_url.clone();
                 async {
                     Ok(lnurlkit::pay::Query {
@@ -23,6 +23,8 @@ async fn test() {
                         comment_size: 140,
                         min: 314,
                         max: 315,
+                        identifier: None,
+                        email: None,
                     })
                 }
             },
