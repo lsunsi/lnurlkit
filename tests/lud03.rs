@@ -55,10 +55,19 @@ async fn test() {
     assert_eq!(wr.core.max, 315);
     assert_eq!(wr.core.description, "descricao");
 
-    let response = wr.clone().callback("pierre").await.expect("callback");
+    let response = wr
+        .clone()
+        .callback(String::from("pierre"))
+        .await
+        .expect("callback");
+
     assert!(matches!(response, lnurlkit::withdraw::CallbackResponse::Ok));
 
-    let response = wr.callback("pierrado").await.expect("callback");
+    let response = wr
+        .callback(String::from("pierrado"))
+        .await
+        .expect("callback");
+
     assert!(matches!(
         response,
         lnurlkit::withdraw::CallbackResponse::Error(r) if r == "caum"

@@ -33,32 +33,74 @@ impl std::fmt::Display for Query {
 }
 
 impl Query {
-    /// # Errors
-    ///
-    /// Returns errors on network or deserialization failures.
     #[must_use]
-    pub fn callback_accept(mut self, remoteid: &str, private: bool) -> url::Url {
-        self.callback.query_pairs_mut().extend_pairs([
-            ("k1", &self.k1 as &str),
-            ("remoteid", remoteid),
-            ("private", if private { "1" } else { "0" }),
-        ]);
-
-        self.callback
+    pub fn callback_accept(self, remoteid: String, private: bool) -> CallbackRequest {
+        CallbackRequest::Accept {
+            url: self.callback,
+            k1: self.k1,
+            remoteid,
+            private,
+        }
     }
 
-    /// # Errors
-    ///
-    /// Returns errors on network or deserialization failures.
     #[must_use]
-    pub fn callback_cancel(mut self, remoteid: &str) -> url::Url {
-        self.callback.query_pairs_mut().extend_pairs([
-            ("k1", &self.k1 as &str),
-            ("remoteid", remoteid),
-            ("cancel", "1"),
-        ]);
+    pub fn callback_cancel(self, remoteid: String) -> CallbackRequest {
+        CallbackRequest::Cancel {
+            url: self.callback,
+            k1: self.k1,
+            remoteid,
+        }
+    }
+}
 
-        self.callback
+pub enum CallbackRequest {
+    Cancel {
+        url: url::Url,
+        remoteid: String,
+        k1: String,
+    },
+    Accept {
+        url: url::Url,
+        remoteid: String,
+        private: bool,
+        k1: String,
+    },
+}
+
+impl CallbackRequest {
+    #[must_use]
+    pub fn url(self) -> url::Url {
+        match self {
+            CallbackRequest::Cancel {
+                mut url,
+                remoteid,
+                k1,
+            } => {
+                let query = [
+                    ("k1", k1),
+                    ("remoteid", remoteid),
+                    ("cancel", String::from("1")),
+                ];
+
+                url.query_pairs_mut().extend_pairs(query);
+                url
+            }
+            CallbackRequest::Accept {
+                mut url,
+                remoteid,
+                private,
+                k1,
+            } => {
+                let query = [
+                    ("k1", k1),
+                    ("remoteid", remoteid),
+                    ("private", String::from(if private { "1" } else { "0" })),
+                ];
+
+                url.query_pairs_mut().extend_pairs(query);
+                url
+            }
+        }
     }
 }
 
@@ -178,14 +220,19 @@ mod tests {
         "#;
 
         let parsed = input.parse::<super::Query>().expect("parse");
-        let url = parsed.clone().callback_accept("idremoto", true);
+        let url = parsed
+            .clone()
+            .callback_accept(String::from("idremoto"), true)
+            .url();
 
         assert_eq!(
             url.to_string(),
             "https://yuri/?o=callback&k1=caum&remoteid=idremoto&private=1"
         );
 
-        let url = parsed.callback_accept("idremoto", false);
+        let url = parsed
+            .callback_accept(String::from("idremoto"), false)
+            .url();
 
         assert_eq!(
             url.to_string(),
@@ -204,7 +251,7 @@ mod tests {
         "#;
 
         let parsed = input.parse::<super::Query>().expect("parse");
-        let url = parsed.callback_cancel("idremoto");
+        let url = parsed.callback_cancel(String::from("idremoto")).url();
 
         assert_eq!(
             url.to_string(),

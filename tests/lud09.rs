@@ -68,10 +68,19 @@ async fn test() {
         panic!("not pay request");
     };
 
-    let invoice = pr.clone().callback("", 0).await.expect("callback");
+    let invoice = pr
+        .clone()
+        .callback(0, String::new())
+        .await
+        .expect("callback");
+
     assert!(invoice.success_action.is_none());
 
-    let invoice = pr.clone().callback("mensagem", 1).await.expect("callback");
+    let invoice = pr
+        .clone()
+        .callback(1, String::from("mensagem"))
+        .await
+        .expect("callback");
 
     let Some(lnurlkit::pay::SuccessAction::Message(m)) = invoice.success_action else {
         panic!("bad success action");
@@ -79,7 +88,10 @@ async fn test() {
 
     assert_eq!(m, "mensagem");
 
-    let invoice = pr.callback("descricao", 2).await.expect("callback");
+    let invoice = pr
+        .callback(2, String::from("descricao"))
+        .await
+        .expect("callback");
 
     let Some(lnurlkit::pay::SuccessAction::Url(u, d)) = invoice.success_action else {
         panic!("bad success action");

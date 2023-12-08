@@ -39,16 +39,28 @@ impl std::fmt::Display for Query {
 }
 
 impl Query {
-    /// # Errors
-    ///
-    /// Returns errors on network or deserialization failures.
     #[must_use]
-    pub fn callback(mut self, pr: &str) -> url::Url {
-        self.callback
-            .query_pairs_mut()
-            .extend_pairs([("k1", &self.k1 as &str), ("pr", pr)]);
+    pub fn callback(self, pr: String) -> CallbackRequest {
+        CallbackRequest {
+            url: self.callback,
+            k1: self.k1,
+            pr,
+        }
+    }
+}
 
-        self.callback
+pub struct CallbackRequest {
+    pub url: url::Url,
+    pub k1: String,
+    pub pr: String,
+}
+
+impl CallbackRequest {
+    #[must_use]
+    pub fn url(mut self) -> url::Url {
+        let query = [("k1", self.k1), ("pr", self.pr)];
+        self.url.query_pairs_mut().extend_pairs(query);
+        self.url
     }
 }
 
@@ -182,7 +194,7 @@ mod tests {
         let parsed = input.parse::<super::Query>().expect("parse");
 
         assert_eq!(
-            parsed.callback("pierre").to_string(),
+            parsed.callback(String::from("pierre")).url().to_string(),
             "https://yuri/?o=callback&k1=caum&pr=pierre"
         );
     }

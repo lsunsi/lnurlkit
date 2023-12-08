@@ -65,6 +65,10 @@ async fn test() {
         "the destroyer of worlds"
     );
 
-    let invoice = pr.callback("comment", 314).await.expect("callback");
+    let invoice = pr
+        .callback(314, String::from("comment"))
+        .await
+        .expect("callback");
+
     assert_eq!(invoice.pr, "pierre:314");
 }

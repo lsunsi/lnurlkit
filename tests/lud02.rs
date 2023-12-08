@@ -53,7 +53,7 @@ async fn test() {
 
     let response = cr
         .clone()
-        .callback_cancel("idremoto")
+        .callback_cancel(String::from("idremoto"))
         .await
         .expect("callback");
 
@@ -61,7 +61,7 @@ async fn test() {
 
     let response = cr
         .clone()
-        .callback_cancel("iderrado")
+        .callback_cancel(String::from("iderrado"))
         .await
         .expect("callback");
 
@@ -72,7 +72,7 @@ async fn test() {
 
     let response = cr
         .clone()
-        .callback_accept("iderrado", true)
+        .callback_accept(String::from("iderrado"), true)
         .await
         .expect("callback");
 
@@ -82,7 +82,7 @@ async fn test() {
     ));
 
     let response = cr
-        .callback_accept("iderrado", false)
+        .callback_accept(String::from("iderrado"), false)
         .await
         .expect("callback");
 

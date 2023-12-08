@@ -59,9 +59,18 @@ async fn test() {
 
     assert_eq!(pr.core.comment_size.unwrap(), 140);
 
-    let invoice = pr.clone().callback("", 314).await.expect("callback");
+    let invoice = pr
+        .clone()
+        .callback(314, String::new())
+        .await
+        .expect("callback");
+
     assert_eq!(invoice.pr, "pierre:None");
 
-    let invoice = pr.callback("comentario", 314).await.expect("callback");
+    let invoice = pr
+        .callback(314, String::from("comentario"))
+        .await
+        .expect("callback");
+
     assert_eq!(invoice.pr, "pierre:Some(\"comentario\")");
 }

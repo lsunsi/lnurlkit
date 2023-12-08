@@ -130,21 +130,35 @@ impl std::fmt::Display for Query {
 }
 
 impl Query {
-    /// # Errors
-    ///
-    /// Returns errors on network or deserialization failures.
     #[must_use]
-    pub fn callback(mut self, comment: &str, millisatoshis: u64) -> url::Url {
-        self.callback.query_pairs_mut().extend_pairs(
-            [
-                (!comment.is_empty()).then_some(("comment", comment)),
-                Some(("amount", &millisatoshis.to_string())),
-            ]
-            .into_iter()
-            .flatten(),
-        );
+    pub fn callback(self, millisatoshis: u64, comment: String) -> CallbackRequest {
+        CallbackRequest {
+            url: self.callback,
+            millisatoshis,
+            comment,
+        }
+    }
+}
 
-        self.callback
+pub struct CallbackRequest {
+    pub url: url::Url,
+    pub comment: String,
+    pub millisatoshis: u64,
+}
+
+impl CallbackRequest {
+    #[must_use]
+    pub fn url(mut self) -> url::Url {
+        let query = [
+            (!self.comment.is_empty()).then_some(("comment", self.comment)),
+            Some(("amount", self.millisatoshis.to_string())),
+        ];
+
+        self.url
+            .query_pairs_mut()
+            .extend_pairs(query.into_iter().flatten());
+
+        self.url
     }
 }
 
@@ -528,12 +542,16 @@ mod tests {
         let parsed = input.parse::<super::Query>().expect("parse");
 
         assert_eq!(
-            parsed.clone().callback("comentario", 314).to_string(),
+            parsed
+                .clone()
+                .callback(314, String::from("comentario"))
+                .url()
+                .to_string(),
             "https://yuri/?o=callback&comment=comentario&amount=314"
         );
 
         assert_eq!(
-            parsed.callback("", 314).to_string(),
+            parsed.callback(314, String::new()).url().to_string(),
             "https://yuri/?o=callback&amount=314"
         );
     }

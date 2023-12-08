@@ -57,9 +57,14 @@ async fn test() {
         panic!("not pay request");
     };
 
-    let invoice = pr.clone().callback("", 314).await.expect("callback");
+    let invoice = pr
+        .clone()
+        .callback(314, String::new())
+        .await
+        .expect("callback");
+
     assert!(invoice.disposable);
 
-    let invoice = pr.callback("", 315).await.expect("callback");
+    let invoice = pr.callback(315, String::new()).await.expect("callback");
     assert!(!invoice.disposable);
 }

@@ -53,10 +53,10 @@ impl Channel<'_> {
     /// Returns errors on network or deserialization failures.
     pub async fn callback_accept(
         self,
-        remoteid: &str,
+        remoteid: String,
         private: bool,
     ) -> Result<crate::core::channel::CallbackResponse, &'static str> {
-        let callback = self.core.callback_accept(remoteid, private);
+        let callback = self.core.callback_accept(remoteid, private).url();
 
         let response = self
             .client
@@ -74,9 +74,9 @@ impl Channel<'_> {
     /// Returns errors on network or deserialization failures.
     pub async fn callback_cancel(
         self,
-        remoteid: &str,
+        remoteid: String,
     ) -> Result<crate::core::channel::CallbackResponse, &'static str> {
-        let callback = self.core.callback_cancel(remoteid);
+        let callback = self.core.callback_cancel(remoteid).url();
 
         let response = self
             .client
@@ -96,10 +96,10 @@ impl Pay<'_> {
     /// Returns errors on network or deserialization failures.
     pub async fn callback(
         self,
-        comment: &str,
         millisatoshis: u64,
+        comment: String,
     ) -> Result<crate::core::pay::CallbackResponse, &'static str> {
-        let callback = self.core.callback(comment, millisatoshis);
+        let callback = self.core.callback(millisatoshis, comment).url();
 
         let response = self
             .client
@@ -119,9 +119,9 @@ impl Withdraw<'_> {
     /// Returns errors on network or deserialization failures.
     pub async fn callback(
         self,
-        pr: &str,
+        pr: String,
     ) -> Result<crate::core::withdraw::CallbackResponse, &'static str> {
-        let callback = self.core.callback(pr);
+        let callback = self.core.callback(pr).url();
 
         let response = self
             .client
