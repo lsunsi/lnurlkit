@@ -9,7 +9,7 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlp");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlp/callback")).expect("url");
 
-    let router = lnurlkit::Server::default()
+    let router = lnurlkit::Server::new(addr.to_string())
         .pay_request(
             move |_| {
                 let callback = callback_url.clone();
@@ -29,9 +29,9 @@ async fn test() {
                     })
                 }
             },
-            |(_, comment)| async move {
+            |req: lnurlkit::pay::CallbackRequest| async move {
                 Ok(lnurlkit::pay::CallbackResponse {
-                    pr: format!("pierre:{comment:?}"),
+                    pr: format!("pierre:{}", req.comment),
                     disposable: false,
                     success_action: None,
                 })
@@ -65,12 +65,12 @@ async fn test() {
         .await
         .expect("callback");
 
-    assert_eq!(invoice.pr, "pierre:None");
+    assert_eq!(invoice.pr, "pierre:");
 
     let invoice = pr
         .callback(314, String::from("comentario"))
         .await
         .expect("callback");
 
-    assert_eq!(invoice.pr, "pierre:Some(\"comentario\")");
+    assert_eq!(invoice.pr, "pierre:comentario");
 }

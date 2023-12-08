@@ -9,7 +9,7 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlc");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlc/callback")).expect("url");
 
-    let router = lnurlkit::Server::default()
+    let router = lnurlkit::Server::new(addr.to_string())
         .channel_request(
             move |()| {
                 let callback = callback_url.clone();
@@ -21,11 +21,18 @@ async fn test() {
                     })
                 }
             },
-            |(k1, remoteid, action)| async move {
-                Ok(if remoteid == "idremoto" {
-                    lnurlkit::channel::CallbackResponse::Ok
-                } else {
-                    lnurlkit::channel::CallbackResponse::Error(format!("{k1}/{action:?}"))
+            |req: lnurlkit::channel::CallbackRequest| async move {
+                Ok(match req {
+                    lnurlkit::channel::CallbackRequest::Cancel { remoteid, k1, .. } => {
+                        if remoteid == "idremoto" {
+                            lnurlkit::channel::CallbackResponse::Ok
+                        } else {
+                            lnurlkit::channel::CallbackResponse::Error(format!("{k1}/Cancel"))
+                        }
+                    }
+                    lnurlkit::channel::CallbackRequest::Accept { private, k1, .. } => {
+                        lnurlkit::channel::CallbackResponse::Error(format!("{k1}/Accept/{private}"))
+                    }
                 })
             },
         )
@@ -78,7 +85,7 @@ async fn test() {
 
     assert!(matches!(
         response,
-        lnurlkit::channel::CallbackResponse::Error(r) if r == "caum/Accept { private: true }"
+        lnurlkit::channel::CallbackResponse::Error(r) if r == "caum/Accept/true"
     ));
 
     let response = cr
@@ -88,6 +95,6 @@ async fn test() {
 
     assert!(matches!(
         response,
-        lnurlkit::channel::CallbackResponse::Error(r) if r == "caum/Accept { private: false }"
+        lnurlkit::channel::CallbackResponse::Error(r) if r == "caum/Accept/false"
     ));
 }

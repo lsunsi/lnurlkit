@@ -6,18 +6,18 @@ impl Client {
     ///
     /// Returns errors on network or deserialization failures.
     pub async fn query(&self, s: &str) -> Result<Query, &'static str> {
-        let url = crate::core::resolve(s)?;
+        let url = crate::resolve(s)?;
 
         let client = &self.0;
         let response = client.get(url).send().await.map_err(|_| "request failed")?;
         let text = response.text().await.map_err(|_| "body failed")?;
 
-        text.parse::<crate::core::Query>()
+        text.parse::<crate::Query>()
             .map_err(|_| "parse failed")
             .map(|query| match query {
-                crate::core::Query::Channel(core) => Query::Channel(Channel { client, core }),
-                crate::core::Query::Pay(core) => Query::Pay(Pay { client, core }),
-                crate::core::Query::Withdraw(core) => Query::Withdraw(Withdraw { client, core }),
+                crate::Query::Channel(core) => Query::Channel(Channel { client, core }),
+                crate::Query::Pay(core) => Query::Pay(Pay { client, core }),
+                crate::Query::Withdraw(core) => Query::Withdraw(Withdraw { client, core }),
             })
     }
 }
@@ -32,19 +32,19 @@ pub enum Query<'a> {
 #[derive(Clone, Debug)]
 pub struct Channel<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::core::channel::Query,
+    pub core: crate::channel::Query,
 }
 
 #[derive(Clone, Debug)]
 pub struct Pay<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::core::pay::Query,
+    pub core: crate::pay::Query,
 }
 
 #[derive(Clone, Debug)]
 pub struct Withdraw<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::core::withdraw::Query,
+    pub core: crate::withdraw::Query,
 }
 
 impl Channel<'_> {
@@ -55,7 +55,7 @@ impl Channel<'_> {
         self,
         remoteid: String,
         private: bool,
-    ) -> Result<crate::core::channel::CallbackResponse, &'static str> {
+    ) -> Result<crate::channel::CallbackResponse, &'static str> {
         let callback = self.core.callback_accept(remoteid, private).url();
 
         let response = self
@@ -75,7 +75,7 @@ impl Channel<'_> {
     pub async fn callback_cancel(
         self,
         remoteid: String,
-    ) -> Result<crate::core::channel::CallbackResponse, &'static str> {
+    ) -> Result<crate::channel::CallbackResponse, &'static str> {
         let callback = self.core.callback_cancel(remoteid).url();
 
         let response = self
@@ -98,7 +98,7 @@ impl Pay<'_> {
         self,
         millisatoshis: u64,
         comment: String,
-    ) -> Result<crate::core::pay::CallbackResponse, &'static str> {
+    ) -> Result<crate::pay::CallbackResponse, &'static str> {
         let callback = self.core.callback(millisatoshis, comment).url();
 
         let response = self
@@ -120,7 +120,7 @@ impl Withdraw<'_> {
     pub async fn callback(
         self,
         pr: String,
-    ) -> Result<crate::core::withdraw::CallbackResponse, &'static str> {
+    ) -> Result<crate::withdraw::CallbackResponse, &'static str> {
         let callback = self.core.callback(pr).url();
 
         let response = self

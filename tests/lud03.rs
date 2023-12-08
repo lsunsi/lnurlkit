@@ -9,7 +9,7 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlw");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlw/callback")).expect("url");
 
-    let router = lnurlkit::Server::default()
+    let router = lnurlkit::Server::new(addr.to_string())
         .withdraw_request(
             move |()| {
                 let callback = callback_url.clone();
@@ -23,11 +23,11 @@ async fn test() {
                     })
                 }
             },
-            |(k1, pr)| async move {
-                Ok(if pr == "pierre" {
+            |req: lnurlkit::withdraw::CallbackRequest| async move {
+                Ok(if req.pr == "pierre" {
                     lnurlkit::withdraw::CallbackResponse::Ok
                 } else {
-                    lnurlkit::withdraw::CallbackResponse::Error(k1)
+                    lnurlkit::withdraw::CallbackResponse::Error(req.k1)
                 })
             },
         )

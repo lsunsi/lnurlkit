@@ -9,7 +9,7 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlp");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlp/callback")).expect("url");
 
-    let router = lnurlkit::Server::default()
+    let router = lnurlkit::Server::new(addr.to_string())
         .pay_request(
             move |_| {
                 let callback = callback_url.clone();
@@ -29,20 +29,18 @@ async fn test() {
                     })
                 }
             },
-            |(amount, comment): (u64, Option<String>)| async move {
+            |req: lnurlkit::pay::CallbackRequest| async move {
                 Ok(lnurlkit::pay::CallbackResponse {
                     pr: String::new(),
                     disposable: false,
-                    success_action: if amount == 0 {
+                    success_action: if req.millisatoshis == 0 {
                         None
-                    } else if amount == 1 {
-                        Some(lnurlkit::pay::SuccessAction::Message(
-                            comment.unwrap_or_default(),
-                        ))
+                    } else if req.millisatoshis == 1 {
+                        Some(lnurlkit::pay::SuccessAction::Message(req.comment))
                     } else {
                         Some(lnurlkit::pay::SuccessAction::Url(
                             url::Url::parse("http://u.rl").expect("url"),
-                            comment.unwrap_or_default(),
+                            req.comment,
                         ))
                     },
                 })

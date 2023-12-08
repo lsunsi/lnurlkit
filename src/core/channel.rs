@@ -105,12 +105,6 @@ impl CallbackRequest {
 }
 
 #[derive(Debug)]
-pub enum CallbackAction {
-    Accept { private: bool },
-    Cancel,
-}
-
-#[derive(Debug)]
 pub enum CallbackResponse {
     Error(String),
     Ok,
