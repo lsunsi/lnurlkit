@@ -1,14 +1,12 @@
 use axum::{
     extract::{Path, RawQuery},
     http::StatusCode,
-    http::Uri,
     routing::get,
     Router,
 };
 use std::future::Future;
 
 pub struct Server<CQ, CC, PQ, PC, WQ, WC> {
-    base: String,
     channel_query: CQ,
     channel_callback: CC,
     pay_query: PQ,
@@ -17,24 +15,30 @@ pub struct Server<CQ, CC, PQ, PC, WQ, WC> {
     withdraw_callback: WC,
 }
 
-impl
-    Server<
+impl Default
+    for Server<
         // Channel Request
-        unimplemented::Handler<(), crate::channel::Query>,
-        unimplemented::Handler<crate::channel::CallbackRequest, crate::channel::CallbackResponse>,
+        unimplemented::Handler<(), crate::channel::server::Query>,
+        unimplemented::Handler<
+            crate::channel::server::CallbackRequest,
+            crate::channel::server::CallbackResponse,
+        >,
         // Pay Request
-        unimplemented::Handler<Option<String>, crate::pay::Query>,
-        unimplemented::Handler<crate::pay::CallbackRequest, crate::pay::CallbackResponse>,
+        unimplemented::Handler<Option<String>, crate::pay::server::Query>,
+        unimplemented::Handler<
+            crate::pay::server::CallbackRequest,
+            crate::pay::server::CallbackResponse,
+        >,
         // Withdraw Request
-        unimplemented::Handler<(), crate::withdraw::Query>,
-        unimplemented::Handler<crate::withdraw::CallbackRequest, crate::withdraw::CallbackResponse>,
+        unimplemented::Handler<(), crate::withdraw::server::Query>,
+        unimplemented::Handler<
+            crate::withdraw::server::CallbackRequest,
+            crate::withdraw::server::CallbackResponse,
+        >,
     >
 {
-    #[must_use]
-    pub fn new(base: String) -> Self {
+    fn default() -> Self {
         Server {
-            base,
-
             channel_query: unimplemented::handler,
             channel_callback: unimplemented::handler,
 
@@ -54,7 +58,6 @@ impl<CQ, CC, PQ, PC, WQ, WC> Server<CQ, CC, PQ, PC, WQ, WC> {
         channel_callback: CC2,
     ) -> Server<CQ2, CC2, PQ, PC, WQ, WC> {
         Server {
-            base: self.base,
             channel_query,
             channel_callback,
             pay_query: self.pay_query,
@@ -70,7 +73,6 @@ impl<CQ, CC, PQ, PC, WQ, WC> Server<CQ, CC, PQ, PC, WQ, WC> {
         pay_callback: PC2,
     ) -> Server<CQ, CC, PQ2, PC2, WQ, WC> {
         Server {
-            base: self.base,
             channel_query: self.channel_query,
             channel_callback: self.channel_callback,
             pay_query,
@@ -86,7 +88,6 @@ impl<CQ, CC, PQ, PC, WQ, WC> Server<CQ, CC, PQ, PC, WQ, WC> {
         withdraw_callback: WC2,
     ) -> Server<CQ, CC, PQ, PC, WQ2, WC2> {
         Server {
-            base: self.base,
             channel_query: self.channel_query,
             channel_callback: self.channel_callback,
             pay_query: self.pay_query,
@@ -101,29 +102,25 @@ impl<CQ, CQFut, CC, CCFut, PQ, PQFut, PC, PCFut, WQ, WQFut, WC, WCFut>
     Server<CQ, CC, PQ, PC, WQ, WC>
 where
     CQ: 'static + Send + Clone + Fn(()) -> CQFut,
-    CQFut: Send + Future<Output = Result<crate::channel::Query, StatusCode>>,
+    CQFut: Send + Future<Output = Result<crate::channel::server::Query, StatusCode>>,
 
-    CC: 'static + Send + Clone + Fn(crate::channel::CallbackRequest) -> CCFut,
-    CCFut: Send + Future<Output = Result<crate::channel::CallbackResponse, StatusCode>>,
+    CC: 'static + Send + Clone + Fn(crate::channel::server::CallbackRequest) -> CCFut,
+    CCFut: Send + Future<Output = Result<crate::channel::server::CallbackResponse, StatusCode>>,
 
     PQ: 'static + Send + Clone + Fn(Option<String>) -> PQFut,
-    PQFut: Send + Future<Output = Result<crate::pay::Query, StatusCode>>,
+    PQFut: Send + Future<Output = Result<crate::pay::server::Query, StatusCode>>,
 
-    PC: 'static + Send + Clone + Fn(crate::pay::CallbackRequest) -> PCFut,
-    PCFut: Send + Future<Output = Result<crate::pay::CallbackResponse, StatusCode>>,
+    PC: 'static + Send + Clone + Fn(crate::pay::server::CallbackRequest) -> PCFut,
+    PCFut: Send + Future<Output = Result<crate::pay::server::CallbackResponse, StatusCode>>,
 
     WQ: 'static + Send + Clone + Fn(()) -> WQFut,
-    WQFut: Send + Future<Output = Result<crate::withdraw::Query, StatusCode>>,
+    WQFut: Send + Future<Output = Result<crate::withdraw::server::Query, StatusCode>>,
 
-    WC: 'static + Send + Clone + Fn(crate::withdraw::CallbackRequest) -> WCFut,
-    WCFut: Send + Future<Output = Result<crate::withdraw::CallbackResponse, StatusCode>>,
+    WC: 'static + Send + Clone + Fn(crate::withdraw::server::CallbackRequest) -> WCFut,
+    WCFut: Send + Future<Output = Result<crate::withdraw::server::CallbackResponse, StatusCode>>,
 {
     #[allow(clippy::too_many_lines)]
     pub fn build(self) -> Router<()> {
-        let base_c = self.base.clone();
-        let base_p = self.base.clone();
-        let base_w = self.base.clone();
-
         Router::new()
             .route(
                 "/lnurlc",
@@ -134,43 +131,11 @@ where
             )
             .route(
                 "/lnurlc/callback",
-                get(move |uri: Uri, RawQuery(q): RawQuery| {
+                get(move |RawQuery(q): RawQuery| {
                     let cc = self.channel_callback.clone();
                     async move {
-                        let url = url::Url::parse(&format!("https://{base_c}{}", uri.path()))
-                            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
                         let q = q.ok_or(StatusCode::BAD_REQUEST)?;
-                        let qs = q
-                            .split('&')
-                            .filter_map(|s| s.split_once('='))
-                            .collect::<std::collections::BTreeMap<_, _>>();
-
-                        let k1 = String::from(*qs.get("k1").ok_or(StatusCode::BAD_REQUEST)?);
-                        let remoteid =
-                            String::from(*qs.get("remoteid").ok_or(StatusCode::BAD_REQUEST)?);
-
-                        let req = if qs.get("cancel").copied() == Some("1") {
-                            Some(crate::channel::CallbackRequest::Cancel { url, remoteid, k1 })
-                        } else {
-                            match qs.get("private").copied() {
-                                Some("0") => Some(crate::channel::CallbackRequest::Accept {
-                                    url,
-                                    remoteid,
-                                    k1,
-                                    private: false,
-                                }),
-                                Some("1") => Some(crate::channel::CallbackRequest::Accept {
-                                    url,
-                                    remoteid,
-                                    k1,
-                                    private: true,
-                                }),
-                                _ => None,
-                            }
-                        }
-                        .ok_or(StatusCode::BAD_REQUEST)?;
-
+                        let req = q.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
                         cc(req).await.map(|a| a.to_string())
                     }
                 }),
@@ -194,35 +159,12 @@ where
             )
             .route(
                 "/lnurlp/callback",
-                get(move |uri: Uri, RawQuery(q): RawQuery| {
+                get(move |RawQuery(q): RawQuery| {
                     let pc = self.pay_callback.clone();
                     async move {
-                        let url = url::Url::parse(&format!("https://{base_p}{}", uri.path()))
-                            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
                         let q = q.ok_or(StatusCode::BAD_REQUEST)?;
-                        let qs = q
-                            .split('&')
-                            .filter_map(|s| s.split_once('='))
-                            .collect::<std::collections::BTreeMap<_, _>>();
-
-                        let millisatoshis = qs
-                            .get("amount")
-                            .and_then(|s| s.parse().ok())
-                            .ok_or(StatusCode::BAD_REQUEST)?;
-
-                        let comment = qs
-                            .get("comment")
-                            .map(|c| String::from(*c))
-                            .unwrap_or_default();
-
-                        pc(crate::pay::CallbackRequest {
-                            url,
-                            comment,
-                            millisatoshis,
-                        })
-                        .await
-                        .map(|a| a.to_string())
+                        let req = q.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
+                        pc(req).await.map(|a| a.to_string())
                     }
                 }),
             )
@@ -235,24 +177,12 @@ where
             )
             .route(
                 "/lnurlw/callback",
-                get(move |uri: Uri, RawQuery(q): RawQuery| {
+                get(move |RawQuery(q): RawQuery| {
                     let wc = self.withdraw_callback.clone();
                     async move {
-                        let url = url::Url::parse(&format!("https://{base_w}{}", uri.path()))
-                            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
                         let q = q.ok_or(StatusCode::BAD_REQUEST)?;
-                        let qs = q
-                            .split('&')
-                            .filter_map(|s| s.split_once('='))
-                            .collect::<std::collections::BTreeMap<_, _>>();
-
-                        let k1 = String::from(*qs.get("k1").ok_or(StatusCode::BAD_REQUEST)?);
-                        let pr = String::from(*qs.get("pr").ok_or(StatusCode::BAD_REQUEST)?);
-
-                        wc(crate::withdraw::CallbackRequest { url, k1, pr })
-                            .await
-                            .map(|a| a.to_string())
+                        let req = q.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
+                        wc(req).await.map(|a| a.to_string())
                     }
                 }),
             )
@@ -288,6 +218,6 @@ mod unimplemented {
 mod tests {
     #[test]
     fn default_builds() {
-        drop(super::Server::new(String::from("base:31415")).build());
+        drop(super::Server::default().build());
     }
 }

@@ -32,19 +32,19 @@ pub enum Query<'a> {
 #[derive(Clone, Debug)]
 pub struct Channel<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::channel::Query,
+    pub core: crate::channel::client::Query,
 }
 
 #[derive(Clone, Debug)]
 pub struct Pay<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::pay::Query,
+    pub core: crate::pay::client::Query,
 }
 
 #[derive(Clone, Debug)]
 pub struct Withdraw<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::withdraw::Query,
+    pub core: crate::withdraw::client::Query,
 }
 
 impl Channel<'_> {
@@ -52,15 +52,15 @@ impl Channel<'_> {
     ///
     /// Returns errors on network or deserialization failures.
     pub async fn callback_accept(
-        self,
-        remoteid: String,
+        &self,
+        remoteid: &str,
         private: bool,
-    ) -> Result<crate::channel::CallbackResponse, &'static str> {
-        let callback = self.core.callback_accept(remoteid, private).url();
+    ) -> Result<crate::channel::client::CallbackResponse, &'static str> {
+        let callback = self.core.callback_accept(remoteid, private);
 
         let response = self
             .client
-            .get(callback)
+            .get(callback.to_string())
             .send()
             .await
             .map_err(|_| "request failed")?;
@@ -73,14 +73,14 @@ impl Channel<'_> {
     ///
     /// Returns errors on network or deserialization failures.
     pub async fn callback_cancel(
-        self,
-        remoteid: String,
-    ) -> Result<crate::channel::CallbackResponse, &'static str> {
-        let callback = self.core.callback_cancel(remoteid).url();
+        &self,
+        remoteid: &str,
+    ) -> Result<crate::channel::client::CallbackResponse, &'static str> {
+        let callback = self.core.callback_cancel(remoteid);
 
         let response = self
             .client
-            .get(callback)
+            .get(callback.to_string())
             .send()
             .await
             .map_err(|_| "request failed")?;
@@ -95,15 +95,15 @@ impl Pay<'_> {
     ///
     /// Returns errors on network or deserialization failures.
     pub async fn callback(
-        self,
+        &self,
         millisatoshis: u64,
-        comment: String,
-    ) -> Result<crate::pay::CallbackResponse, &'static str> {
-        let callback = self.core.callback(millisatoshis, comment).url();
+        comment: &str,
+    ) -> Result<crate::pay::client::CallbackResponse, &'static str> {
+        let callback = self.core.callback(millisatoshis, comment);
 
         let response = self
             .client
-            .get(callback)
+            .get(callback.to_string())
             .send()
             .await
             .map_err(|_| "request failed")?;
@@ -118,14 +118,14 @@ impl Withdraw<'_> {
     ///
     /// Returns errors on network or deserialization failures.
     pub async fn callback(
-        self,
-        pr: String,
-    ) -> Result<crate::withdraw::CallbackResponse, &'static str> {
-        let callback = self.core.callback(pr).url();
+        &self,
+        pr: &str,
+    ) -> Result<crate::withdraw::client::CallbackResponse, &'static str> {
+        let callback = self.core.callback(pr);
 
         let response = self
             .client
-            .get(callback)
+            .get(callback.to_string())
             .send()
             .await
             .map_err(|_| "request failed")?;

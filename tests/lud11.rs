@@ -9,12 +9,12 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlp");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlp/callback")).expect("url");
 
-    let router = lnurlkit::Server::new(addr.to_string())
+    let router = lnurlkit::Server::default()
         .pay_request(
             move |_| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::pay::Query {
+                    Ok(lnurlkit::pay::server::Query {
                         callback,
                         short_description: String::new(),
                         long_description: None,
@@ -25,12 +25,11 @@ async fn test() {
                         max: 315,
                         identifier: None,
                         email: None,
-                        metadata_raw: None,
                     })
                 }
             },
-            |req: lnurlkit::pay::CallbackRequest| async move {
-                Ok(lnurlkit::pay::CallbackResponse {
+            |req: lnurlkit::pay::server::CallbackRequest| async move {
+                Ok(lnurlkit::pay::server::CallbackResponse {
                     pr: String::new(),
                     disposable: req.millisatoshis % 2 == 0,
                     success_action: None,
@@ -57,14 +56,10 @@ async fn test() {
         panic!("not pay request");
     };
 
-    let invoice = pr
-        .clone()
-        .callback(314, String::new())
-        .await
-        .expect("callback");
+    let invoice = pr.callback(314, "").await.expect("callback");
 
     assert!(invoice.disposable);
 
-    let invoice = pr.callback(315, String::new()).await.expect("callback");
+    let invoice = pr.callback(315, "").await.expect("callback");
     assert!(!invoice.disposable);
 }

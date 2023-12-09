@@ -9,12 +9,12 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlp");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlp/callback")).expect("url");
 
-    let router = lnurlkit::Server::new(addr.to_string())
+    let router = lnurlkit::Server::default()
         .pay_request(
             move |_| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::pay::Query {
+                    Ok(lnurlkit::pay::server::Query {
                         callback,
                         short_description: String::new(),
                         long_description: None,
@@ -25,22 +25,23 @@ async fn test() {
                         max: 315,
                         identifier: None,
                         email: None,
-                        metadata_raw: None,
                     })
                 }
             },
-            |req: lnurlkit::pay::CallbackRequest| async move {
-                Ok(lnurlkit::pay::CallbackResponse {
+            |req: lnurlkit::pay::server::CallbackRequest| async move {
+                Ok(lnurlkit::pay::server::CallbackResponse {
                     pr: String::new(),
                     disposable: false,
                     success_action: if req.millisatoshis == 0 {
                         None
                     } else if req.millisatoshis == 1 {
-                        Some(lnurlkit::pay::SuccessAction::Message(req.comment))
+                        Some(lnurlkit::pay::server::SuccessAction::Message(
+                            req.comment.map(|a| a.to_string()).unwrap_or_default(),
+                        ))
                     } else {
-                        Some(lnurlkit::pay::SuccessAction::Url(
+                        Some(lnurlkit::pay::server::SuccessAction::Url(
                             url::Url::parse("http://u.rl").expect("url"),
-                            req.comment,
+                            req.comment.map(|a| a.to_string()).unwrap_or_default(),
                         ))
                     },
                 })
@@ -66,35 +67,24 @@ async fn test() {
         panic!("not pay request");
     };
 
-    let invoice = pr
-        .clone()
-        .callback(0, String::new())
-        .await
-        .expect("callback");
+    let invoice = pr.callback(0, "").await.expect("callback");
 
     assert!(invoice.success_action.is_none());
 
-    let invoice = pr
-        .clone()
-        .callback(1, String::from("mensagem"))
-        .await
-        .expect("callback");
+    let invoice = pr.callback(1, "mensagem").await.expect("callback");
 
-    let Some(lnurlkit::pay::SuccessAction::Message(m)) = invoice.success_action else {
+    let Some(lnurlkit::pay::client::SuccessAction::Message(m)) = invoice.success_action else {
         panic!("bad success action");
     };
 
-    assert_eq!(m, "mensagem");
+    assert_eq!(&m as &str, "mensagem");
 
-    let invoice = pr
-        .callback(2, String::from("descricao"))
-        .await
-        .expect("callback");
+    let invoice = pr.callback(2, "descricao").await.expect("callback");
 
-    let Some(lnurlkit::pay::SuccessAction::Url(u, d)) = invoice.success_action else {
+    let Some(lnurlkit::pay::client::SuccessAction::Url(u, d)) = invoice.success_action else {
         panic!("bad success action");
     };
 
     assert_eq!(u.to_string(), "http://u.rl/");
-    assert_eq!(d, "descricao");
+    assert_eq!(&d as &str, "descricao");
 }

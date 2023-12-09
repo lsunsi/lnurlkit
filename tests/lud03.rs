@@ -9,12 +9,12 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlw");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlw/callback")).expect("url");
 
-    let router = lnurlkit::Server::new(addr.to_string())
+    let router = lnurlkit::Server::default()
         .withdraw_request(
             move |()| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::withdraw::Query {
+                    Ok(lnurlkit::withdraw::server::Query {
                         description: String::from("descricao"),
                         k1: String::from("caum"),
                         callback,
@@ -23,11 +23,13 @@ async fn test() {
                     })
                 }
             },
-            |req: lnurlkit::withdraw::CallbackRequest| async move {
-                Ok(if req.pr == "pierre" {
-                    lnurlkit::withdraw::CallbackResponse::Ok
+            |req: lnurlkit::withdraw::server::CallbackRequest| async move {
+                Ok(if &req.pr as &str == "pierre" {
+                    lnurlkit::withdraw::server::CallbackResponse::Ok
                 } else {
-                    lnurlkit::withdraw::CallbackResponse::Error(req.k1)
+                    lnurlkit::withdraw::server::CallbackResponse::Error {
+                        reason: req.k1.to_string(),
+                    }
                 })
             },
         )
@@ -53,23 +55,19 @@ async fn test() {
 
     assert_eq!(wr.core.min, 314);
     assert_eq!(wr.core.max, 315);
-    assert_eq!(wr.core.description, "descricao");
+    assert_eq!(&wr.core.description as &str, "descricao");
 
-    let response = wr
-        .clone()
-        .callback(String::from("pierre"))
-        .await
-        .expect("callback");
-
-    assert!(matches!(response, lnurlkit::withdraw::CallbackResponse::Ok));
-
-    let response = wr
-        .callback(String::from("pierrado"))
-        .await
-        .expect("callback");
+    let response = wr.callback("pierre").await.expect("callback");
 
     assert!(matches!(
         response,
-        lnurlkit::withdraw::CallbackResponse::Error(r) if r == "caum"
+        lnurlkit::withdraw::client::CallbackResponse::Ok
+    ));
+
+    let response = wr.callback("pierrado").await.expect("callback");
+
+    assert!(matches!(
+        response,
+        lnurlkit::withdraw::client::CallbackResponse::Error { reason } if &reason as &str == "caum"
     ));
 }

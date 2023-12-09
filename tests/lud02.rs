@@ -9,29 +9,35 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlc");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlc/callback")).expect("url");
 
-    let router = lnurlkit::Server::new(addr.to_string())
+    let router = lnurlkit::Server::default()
         .channel_request(
             move |()| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::channel::Query {
+                    Ok(lnurlkit::channel::server::Query {
                         uri: String::from("u@r:i"),
                         k1: String::from("caum"),
                         callback,
                     })
                 }
             },
-            |req: lnurlkit::channel::CallbackRequest| async move {
+            |req: lnurlkit::channel::server::CallbackRequest| async move {
                 Ok(match req {
-                    lnurlkit::channel::CallbackRequest::Cancel { remoteid, k1, .. } => {
-                        if remoteid == "idremoto" {
-                            lnurlkit::channel::CallbackResponse::Ok
+                    lnurlkit::channel::server::CallbackRequest::Cancel { remoteid, k1 } => {
+                        if &remoteid as &str == "idremoto" {
+                            lnurlkit::channel::server::CallbackResponse::Ok
                         } else {
-                            lnurlkit::channel::CallbackResponse::Error(format!("{k1}/Cancel"))
+                            let reason = format!("Cancel/{k1}/{remoteid}");
+                            lnurlkit::channel::server::CallbackResponse::Error { reason }
                         }
                     }
-                    lnurlkit::channel::CallbackRequest::Accept { private, k1, .. } => {
-                        lnurlkit::channel::CallbackResponse::Error(format!("{k1}/Accept/{private}"))
+                    lnurlkit::channel::server::CallbackRequest::Accept {
+                        remoteid,
+                        private,
+                        k1,
+                    } => {
+                        let reason = format!("Accept/{k1}/{remoteid}/{private}");
+                        lnurlkit::channel::server::CallbackResponse::Error { reason }
                     }
                 })
             },
@@ -56,45 +62,39 @@ async fn test() {
         panic!("not pay request");
     };
 
-    assert_eq!(cr.core.uri, "u@r:i");
+    assert_eq!(&cr.core.uri as &str, "u@r:i");
 
-    let response = cr
-        .clone()
-        .callback_cancel(String::from("idremoto"))
-        .await
-        .expect("callback");
-
-    assert!(matches!(response, lnurlkit::channel::CallbackResponse::Ok));
-
-    let response = cr
-        .clone()
-        .callback_cancel(String::from("iderrado"))
-        .await
-        .expect("callback");
+    let response = cr.callback_cancel("idremoto").await.expect("callback");
 
     assert!(matches!(
         response,
-        lnurlkit::channel::CallbackResponse::Error(r) if r == "caum/Cancel"
+        lnurlkit::channel::client::CallbackResponse::Ok
+    ));
+
+    let response = cr.callback_cancel("iderrado").await.expect("callback");
+
+    assert!(matches!(
+        response,
+        lnurlkit::channel::client::CallbackResponse::Error { reason } if &reason as &str == "Cancel/caum/iderrado"
     ));
 
     let response = cr
-        .clone()
-        .callback_accept(String::from("iderrado"), true)
+        .callback_accept("iderrado", true)
         .await
         .expect("callback");
 
     assert!(matches!(
         response,
-        lnurlkit::channel::CallbackResponse::Error(r) if r == "caum/Accept/true"
+        lnurlkit::channel::client::CallbackResponse::Error { reason } if &reason as &str == "Accept/caum/iderrado/true"
     ));
 
     let response = cr
-        .callback_accept(String::from("iderrado"), false)
+        .callback_accept("iderrado", false)
         .await
         .expect("callback");
 
     assert!(matches!(
         response,
-        lnurlkit::channel::CallbackResponse::Error(r) if r == "caum/Accept/false"
+        lnurlkit::channel::client::CallbackResponse::Error { reason } if &reason as &str == "Accept/caum/iderrado/false"
     ));
 }

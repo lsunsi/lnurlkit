@@ -8,12 +8,12 @@ async fn test() {
 
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlp/callback")).expect("url");
 
-    let router = lnurlkit::Server::new(addr.to_string())
+    let router = lnurlkit::Server::default()
         .pay_request(
             move |identifier: Option<String>| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::pay::Query {
+                    Ok(lnurlkit::pay::server::Query {
                         callback,
                         short_description: String::from("today i become death"),
                         long_description: Some(String::from("the destroyer of worlds")),
@@ -24,12 +24,11 @@ async fn test() {
                         max: 315,
                         identifier: identifier.clone().filter(|i| i.starts_with('n')),
                         email: identifier.filter(|i| i.starts_with('j')),
-                        metadata_raw: None,
                     })
                 }
             },
-            |req: lnurlkit::pay::CallbackRequest| async move {
-                Ok(lnurlkit::pay::CallbackResponse {
+            |req: lnurlkit::pay::server::CallbackRequest| async move {
+                Ok(lnurlkit::pay::server::CallbackResponse {
                     pr: format!("pierre:{}", req.millisatoshis),
                     disposable: false,
                     success_action: None,
@@ -60,7 +59,7 @@ async fn test() {
         panic!("not pay request");
     };
 
-    assert_eq!(pr.core.identifier.unwrap(), "nico");
+    assert_eq!(&pr.core.identifier.unwrap() as &str, "nico");
 
     let lnaddr = format!("jorel@{addr}");
     let mut lnurl = lnurlkit::resolve(&lnaddr).expect("resolve");
@@ -78,5 +77,5 @@ async fn test() {
         panic!("not pay request");
     };
 
-    assert_eq!(pr.core.email.unwrap(), "jorel");
+    assert_eq!(&pr.core.email.unwrap() as &str, "jorel");
 }

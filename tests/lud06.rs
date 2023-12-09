@@ -9,12 +9,12 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlp");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlp/callback")).expect("url");
 
-    let router = lnurlkit::Server::new(addr.to_string())
+    let router = lnurlkit::Server::default()
         .pay_request(
             move |_| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::pay::Query {
+                    Ok(lnurlkit::pay::server::Query {
                         callback,
                         short_description: String::from("today i become death"),
                         long_description: Some(String::from("the destroyer of worlds")),
@@ -25,12 +25,11 @@ async fn test() {
                         max: 315,
                         identifier: None,
                         email: None,
-                        metadata_raw: None,
                     })
                 }
             },
-            |req: lnurlkit::pay::CallbackRequest| async move {
-                Ok(lnurlkit::pay::CallbackResponse {
+            |req: lnurlkit::pay::server::CallbackRequest| async move {
+                Ok(lnurlkit::pay::server::CallbackResponse {
                     pr: format!("pierre:{}", req.millisatoshis),
                     disposable: false,
                     success_action: None,
@@ -61,14 +60,11 @@ async fn test() {
     assert_eq!(pr.core.max, 315);
     assert_eq!(pr.core.short_description, "today i become death");
     assert_eq!(
-        pr.core.long_description.as_ref().unwrap(),
+        &pr.core.long_description.as_ref().unwrap() as &str,
         "the destroyer of worlds"
     );
 
-    let invoice = pr
-        .callback(314, String::from("comment"))
-        .await
-        .expect("callback");
+    let invoice = pr.callback(314, "comment").await.expect("callback");
 
-    assert_eq!(invoice.pr, "pierre:314");
+    assert_eq!(&invoice.pr as &str, "pierre:314");
 }

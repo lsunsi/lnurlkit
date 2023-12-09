@@ -70,9 +70,9 @@ fn resolve_address(s: &str) -> Result<url::Url, &'static str> {
 
 #[derive(Debug)]
 pub enum Query {
-    Channel(channel::Query),
-    Pay(pay::Query),
-    Withdraw(withdraw::Query),
+    Channel(channel::client::Query),
+    Pay(pay::client::Query),
+    Withdraw(withdraw::client::Query),
 }
 
 impl std::str::FromStr for Query {

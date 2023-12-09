@@ -9,12 +9,12 @@ async fn test() {
     let query_url = format!("http://{addr}/lnurlp");
     let callback_url = url::Url::parse(&format!("http://{addr}/lnurlp/callback")).expect("url");
 
-    let router = lnurlkit::Server::new(addr.to_string())
+    let router = lnurlkit::Server::default()
         .pay_request(
             move |_| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::pay::Query {
+                    Ok(lnurlkit::pay::server::Query {
                         callback,
                         short_description: String::new(),
                         long_description: None,
@@ -25,13 +25,12 @@ async fn test() {
                         max: 315,
                         identifier: None,
                         email: None,
-                        metadata_raw: None,
                     })
                 }
             },
-            |req: lnurlkit::pay::CallbackRequest| async move {
-                Ok(lnurlkit::pay::CallbackResponse {
-                    pr: format!("pierre:{}", req.comment),
+            |req: lnurlkit::pay::server::CallbackRequest| async move {
+                Ok(lnurlkit::pay::server::CallbackResponse {
+                    pr: format!("pierre:{:?}", req.comment),
                     disposable: false,
                     success_action: None,
                 })
@@ -59,18 +58,11 @@ async fn test() {
 
     assert_eq!(pr.core.comment_size.unwrap(), 140);
 
-    let invoice = pr
-        .clone()
-        .callback(314, String::new())
-        .await
-        .expect("callback");
+    let invoice = pr.callback(314, "").await.expect("callback");
 
-    assert_eq!(invoice.pr, "pierre:");
+    assert_eq!(&invoice.pr as &str, "pierre:None");
 
-    let invoice = pr
-        .callback(314, String::from("comentario"))
-        .await
-        .expect("callback");
+    let invoice = pr.callback(314, "comentario").await.expect("callback");
 
-    assert_eq!(invoice.pr, "pierre:comentario");
+    assert_eq!(&invoice.pr as &str, "pierre:Some(\"comentario\")");
 }
