@@ -1,20 +1,20 @@
 #[derive(Clone, Debug)]
 pub struct Query {
     callback: url::Url,
-    pub uri: Box<str>,
-    k1: Box<str>,
+    pub uri: String,
+    k1: String,
 }
 
 impl std::str::FromStr for Query {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let d: de::Query = miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
+        let d: de::Query = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
 
         Ok(Query {
-            callback: d.callback.0.into_owned(),
-            uri: d.uri.into_boxed_str(),
-            k1: d.k1.into_boxed_str(),
+            callback: d.callback,
+            uri: d.uri,
+            k1: d.k1,
         })
     }
 }
@@ -86,7 +86,7 @@ impl std::fmt::Display for CallbackRequest<'_> {
 
 #[derive(Clone, Debug)]
 pub enum CallbackResponse {
-    Error { reason: Box<str> },
+    Error { reason: String },
     Ok,
 }
 
@@ -94,13 +94,13 @@ impl std::str::FromStr for CallbackResponse {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let map = miniserde::json::from_str::<std::collections::BTreeMap<String, String>>(s)
+        let map = serde_json::from_str::<std::collections::BTreeMap<String, String>>(s)
             .map_err(|_| "bad json")?;
 
         match map.get("status").map(|s| s as &str) {
             Some("OK") => Ok(CallbackResponse::Ok),
             Some("ERROR") => {
-                let reason = (map.get("reason").ok_or("error without reason")? as &str).into();
+                let reason = String::from(map.get("reason").ok_or("error without reason")?);
                 Ok(CallbackResponse::Error { reason })
             }
             _ => Err("bad status field"),
@@ -109,12 +109,12 @@ impl std::str::FromStr for CallbackResponse {
 }
 
 mod de {
-    use crate::serde::Url;
-    use miniserde::Deserialize;
+    use serde::Deserialize;
+    use url::Url;
 
     #[derive(Deserialize)]
     pub(super) struct Query {
-        pub callback: Url<'static>,
+        pub callback: Url,
         pub uri: String,
         pub k1: String,
     }
@@ -133,8 +133,8 @@ mod tests {
         let parsed = input.parse::<super::Query>().expect("parse");
 
         assert_eq!(parsed.callback.as_str(), "https://yuri/?o=callback");
-        assert_eq!(&parsed.uri as &str, "noh@ipe:porta");
-        assert_eq!(&parsed.k1 as &str, "caum");
+        assert_eq!(parsed.uri, "noh@ipe:porta");
+        assert_eq!(parsed.k1, "caum");
     }
 
     #[test]
@@ -187,7 +187,7 @@ mod tests {
 
         assert!(matches!(
             r#"{ "status": "ERROR", "reason": "razao" }"#.parse().unwrap(),
-            super::CallbackResponse::Error { reason } if &reason as &str == "razao"
+            super::CallbackResponse::Error { reason } if reason == "razao"
         ));
     }
 }

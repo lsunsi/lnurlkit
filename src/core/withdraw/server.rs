@@ -8,20 +8,21 @@ pub struct Query {
 
 impl std::fmt::Display for Query {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&miniserde::json::to_string(&ser::Query {
+        let ser = serde_json::to_string(&ser::Query {
             tag: super::TAG,
-            callback: crate::serde::Url(std::borrow::Cow::Borrowed(&self.callback)),
+            callback: &self.callback,
             default_description: &self.description,
             min_withdrawable: self.min,
             max_withdrawable: self.max,
             k1: &self.k1,
-        }))
+        });
+        f.write_str(&ser.map_err(|_| std::fmt::Error)?)
     }
 }
 
 pub struct CallbackRequest {
-    pub k1: Box<str>,
-    pub pr: Box<str>,
+    pub k1: String,
+    pub pr: String,
 }
 
 impl std::str::FromStr for CallbackRequest {
@@ -33,8 +34,8 @@ impl std::str::FromStr for CallbackRequest {
             .filter_map(|s| s.split_once('='))
             .collect::<std::collections::HashMap<_, _>>();
 
-        let k1 = (*qs.get("k1").ok_or("missing k1")?).into();
-        let pr = (*qs.get("pr").ok_or("missing pr")?).into();
+        let k1 = String::from(*qs.get("k1").ok_or("missing k1")?);
+        let pr = String::from(*qs.get("pr").ok_or("missing pr")?);
 
         Ok(CallbackRequest { k1, pr })
     }
@@ -60,19 +61,20 @@ impl std::fmt::Display for CallbackResponse {
             }
         }
 
-        f.write_str(&miniserde::json::to_string(&map))
+        let ser = serde_json::to_string(&map).map_err(|_| std::fmt::Error)?;
+        f.write_str(&ser)
     }
 }
 
 mod ser {
-    use crate::serde::Url;
-    use miniserde::Serialize;
+    use serde::Serialize;
+    use url::Url;
 
     #[derive(Serialize)]
     pub(super) struct Query<'a> {
         pub tag: &'static str,
         pub k1: &'a str,
-        pub callback: Url<'a>,
+        pub callback: &'a Url,
         #[serde(rename = "defaultDescription")]
         pub default_description: &'a str,
         #[serde(rename = "minWithdrawable")]
@@ -105,8 +107,8 @@ mod tests {
         let input = "k1=caum&pr=pierre";
         let parsed = input.parse::<super::CallbackRequest>().expect("parse");
 
-        assert_eq!(&parsed.pr as &str, "pierre");
-        assert_eq!(&parsed.k1 as &str, "caum");
+        assert_eq!(parsed.pr, "pierre");
+        assert_eq!(parsed.k1, "caum");
     }
 
     #[test]

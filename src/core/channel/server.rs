@@ -7,25 +7,27 @@ pub struct Query {
 
 impl std::fmt::Display for Query {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&miniserde::json::to_string(&ser::Query {
+        let ser = serde_json::to_string(&ser::Query {
             tag: super::TAG,
-            callback: crate::serde::Url(std::borrow::Cow::Borrowed(&self.callback)),
+            callback: &self.callback,
             uri: &self.uri,
             k1: &self.k1,
-        }))
+        });
+
+        f.write_str(&ser.map_err(|_| std::fmt::Error)?)
     }
 }
 
 #[derive(Clone, Debug)]
 pub enum CallbackRequest {
     Accept {
-        remoteid: Box<str>,
-        k1: Box<str>,
+        remoteid: String,
+        k1: String,
         private: bool,
     },
     Cancel {
-        remoteid: Box<str>,
-        k1: Box<str>,
+        remoteid: String,
+        k1: String,
     },
 }
 
@@ -43,19 +45,19 @@ impl std::str::FromStr for CallbackRequest {
 
         if qs.get("cancel").copied() == Some("1") {
             Some(CallbackRequest::Cancel {
-                remoteid: (*remoteid).into(),
-                k1: (*k1).into(),
+                remoteid: String::from(*remoteid),
+                k1: String::from(*k1),
             })
         } else {
             match qs.get("private").copied() {
                 Some("0") => Some(CallbackRequest::Accept {
-                    remoteid: (*remoteid).into(),
-                    k1: (*k1).into(),
+                    remoteid: String::from(*remoteid),
+                    k1: String::from(*k1),
                     private: false,
                 }),
                 Some("1") => Some(CallbackRequest::Accept {
-                    remoteid: (*remoteid).into(),
-                    k1: (*k1).into(),
+                    remoteid: String::from(*remoteid),
+                    k1: String::from(*k1),
                     private: true,
                 }),
                 _ => None,
@@ -85,18 +87,18 @@ impl std::fmt::Display for CallbackResponse {
             }
         }
 
-        f.write_str(&miniserde::json::to_string(&map))
+        f.write_str(&serde_json::to_string(&map).map_err(|_| std::fmt::Error)?)
     }
 }
 
 mod ser {
-    use crate::serde::Url;
-    use miniserde::Serialize;
+    use serde::Serialize;
+    use url::Url;
 
     #[derive(Serialize)]
     pub(super) struct Query<'a> {
         pub tag: &'static str,
-        pub callback: Url<'a>,
+        pub callback: &'a Url,
         pub uri: &'a str,
         pub k1: &'a str,
     }
@@ -130,8 +132,8 @@ mod tests {
             panic!("wrong parsed");
         };
 
-        assert_eq!(&remoteid as &str, "idremoto");
-        assert_eq!(&k1 as &str, "caum");
+        assert_eq!(remoteid, "idremoto");
+        assert_eq!(k1, "caum");
         assert!(private);
 
         let input = "remoteid=idremoto&k1=caum&private=0";
@@ -146,8 +148,8 @@ mod tests {
             panic!("wrong parsed");
         };
 
-        assert_eq!(&remoteid as &str, "idremoto");
-        assert_eq!(&k1 as &str, "caum");
+        assert_eq!(remoteid, "idremoto");
+        assert_eq!(k1, "caum");
         assert!(!private);
 
         let input = "remoteid=idremoto&k1=caum&private=2";
@@ -164,8 +166,8 @@ mod tests {
             panic!("wrong parsed");
         };
 
-        assert_eq!(&remoteid as &str, "idremoto");
-        assert_eq!(&k1 as &str, "caum");
+        assert_eq!(remoteid, "idremoto");
+        assert_eq!(k1, "caum");
 
         let input = "remoteid=idremoto&k1=caum&cancel=0";
         let parsed = input.parse::<super::CallbackRequest>();

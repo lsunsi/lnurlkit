@@ -1,13 +1,13 @@
 #[derive(Clone, Debug)]
 pub struct Query {
     callback: url::Url,
-    pub metadata_raw: Box<str>,
+    pub metadata_raw: String,
     pub short_description: String,
-    pub long_description: Option<Box<str>>,
-    pub identifier: Option<Box<str>>,
-    pub email: Option<Box<str>>,
-    pub jpeg: Option<Box<[u8]>>,
-    pub png: Option<Box<[u8]>>,
+    pub long_description: Option<String>,
+    pub identifier: Option<String>,
+    pub email: Option<String>,
+    pub jpeg: Option<Vec<u8>>,
+    pub png: Option<Vec<u8>>,
     pub comment_size: Option<u64>,
     pub min: u64,
     pub max: u64,
@@ -18,11 +18,11 @@ impl std::str::FromStr for Query {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use base64::{prelude::BASE64_STANDARD, Engine};
-        use miniserde::json::Value;
+        use serde_json::Value;
 
-        let p: de::Query = miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
+        let p: de::Query = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
 
-        let metadata = miniserde::json::from_str::<Vec<(String, Value)>>(&p.metadata)
+        let metadata = serde_json::from_str::<Vec<(String, Value)>>(&p.metadata)
             .map_err(|_| "deserialize metadata failed")?;
 
         let short_description = metadata
@@ -40,8 +40,7 @@ impl std::str::FromStr for Query {
             .and_then(|v| match v {
                 Value::String(s) => Some(String::from(s)),
                 _ => None,
-            })
-            .map(String::into_boxed_str);
+            });
 
         let jpeg = metadata
             .iter()
@@ -49,8 +48,7 @@ impl std::str::FromStr for Query {
             .and_then(|v| match v {
                 Value::String(s) => BASE64_STANDARD.decode(s).ok(),
                 _ => None,
-            })
-            .map(Vec::into_boxed_slice);
+            });
 
         let png = metadata
             .iter()
@@ -58,8 +56,7 @@ impl std::str::FromStr for Query {
             .and_then(|v| match v {
                 Value::String(s) => BASE64_STANDARD.decode(s).ok(),
                 _ => None,
-            })
-            .map(Vec::into_boxed_slice);
+            });
 
         let identifier = metadata
             .iter()
@@ -67,8 +64,7 @@ impl std::str::FromStr for Query {
             .and_then(|v| match v {
                 Value::String(s) => Some(String::from(s)),
                 _ => None,
-            })
-            .map(String::into_boxed_str);
+            });
 
         let email = metadata
             .iter()
@@ -76,12 +72,11 @@ impl std::str::FromStr for Query {
             .and_then(|v| match v {
                 Value::String(s) => Some(String::from(s)),
                 _ => None,
-            })
-            .map(String::into_boxed_str);
+            });
 
         Ok(Query {
-            metadata_raw: p.metadata.into_boxed_str(),
-            callback: p.callback.0.into_owned(),
+            metadata_raw: p.metadata,
+            callback: p.callback,
             comment_size: p.comment_allowed,
             min: p.min_sendable,
             max: p.max_sendable,
@@ -131,38 +126,37 @@ impl std::fmt::Display for CallbackRequest<'_> {
 
 #[derive(Clone, Debug)]
 pub struct CallbackResponse {
-    pub pr: Box<str>,
+    pub pr: String,
     pub disposable: bool,
     pub success_action: Option<SuccessAction>,
 }
 
 #[derive(Clone, Debug)]
 pub enum SuccessAction {
-    Url(url::Url, Box<str>),
-    Message(Box<str>),
+    Url(url::Url, String),
+    Message(String),
 }
 
 impl std::str::FromStr for CallbackResponse {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let a: de::CallbackResponse =
-            miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
+        let a: de::CallbackResponse = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
 
         let success_action = a
             .success_action
             .and_then(|sa| match sa.get("tag")? as &str {
-                "message" => Some(SuccessAction::Message((sa.get("message")? as &str).into())),
+                "message" => Some(SuccessAction::Message(String::from(sa.get("message")?))),
                 "url" => {
                     let url = url::Url::parse(sa.get("url")?).ok()?;
-                    let description = (sa.get("description")? as &str).into();
+                    let description = String::from(sa.get("description")?);
                     Some(SuccessAction::Url(url, description))
                 }
                 _ => None,
             });
 
         Ok(Self {
-            pr: a.pr.into(),
+            pr: a.pr,
             disposable: a.disposable.unwrap_or(true),
             success_action,
         })
@@ -170,14 +164,14 @@ impl std::str::FromStr for CallbackResponse {
 }
 
 mod de {
-    use crate::serde::Url;
-    use miniserde::Deserialize;
+    use serde::Deserialize;
     use std::collections::BTreeMap;
+    use url::Url;
 
     #[derive(Deserialize)]
     pub(super) struct Query {
         pub metadata: String,
-        pub callback: Url<'static>,
+        pub callback: Url,
         #[serde(rename = "minSendable")]
         pub min_sendable: u64,
         #[serde(rename = "maxSendable")]
@@ -211,7 +205,7 @@ mod tests {
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.short_description, "boneco do steve magal");
         assert_eq!(
-            &parsed.metadata_raw as &str,
+            parsed.metadata_raw,
             "[[\"text/plain\", \"boneco do steve magal\"],[\"text/crazy\", \"👋🇧🇴💾\"]]"
         );
         assert_eq!(parsed.min, 314);
@@ -250,7 +244,7 @@ mod tests {
 
         let parsed = input.parse::<super::Query>().expect("parse");
         assert_eq!(
-            &parsed.long_description.unwrap() as &str,
+            parsed.long_description.unwrap(),
             "mochila a jato brutal incluida"
         );
     }
@@ -265,8 +259,8 @@ mod tests {
         }"#;
 
         let parsed = input.parse::<super::Query>().expect("parse");
-        assert_eq!(&parsed.jpeg.unwrap() as &[u8], b"imagembrutal");
-        assert_eq!(&parsed.png.unwrap() as &[u8], b"fotobrutal");
+        assert_eq!(parsed.jpeg.unwrap(), b"imagembrutal");
+        assert_eq!(parsed.png.unwrap(), b"fotobrutal");
     }
 
     #[test]
@@ -279,7 +273,7 @@ mod tests {
         }"#;
 
         let parsed = input.parse::<super::Query>().expect("parse");
-        assert_eq!(&parsed.identifier.unwrap() as &str, "steve@magal.brutal");
+        assert_eq!(parsed.identifier.unwrap(), "steve@magal.brutal");
     }
 
     #[test]
@@ -292,7 +286,7 @@ mod tests {
         }"#;
 
         let parsed = input.parse::<super::Query>().expect("parse");
-        assert_eq!(&parsed.email.unwrap() as &str, "steve@magal.brutal");
+        assert_eq!(parsed.email.unwrap(), "steve@magal.brutal");
     }
 
     #[test]
@@ -335,7 +329,7 @@ mod tests {
 
         let parsed = input.parse::<super::CallbackResponse>().expect("parse");
         assert!(parsed.success_action.is_none());
-        assert_eq!(&parsed.pr as &str, "pierre");
+        assert_eq!(parsed.pr, "pierre");
         assert!(parsed.disposable);
     }
 
@@ -361,7 +355,7 @@ mod tests {
             panic!("bad success action");
         };
 
-        assert_eq!(&m as &str, "obrigado!");
+        assert_eq!(m, "obrigado!");
 
         let input = r#"
             { "pr": "", "successAction": { "tag": "url", "description": "valeu demais", "url": "http://eh.nois" } }
@@ -374,6 +368,6 @@ mod tests {
         };
 
         assert_eq!(u.to_string(), "http://eh.nois/");
-        assert_eq!(&d as &str, "valeu demais");
+        assert_eq!(d, "valeu demais");
     }
 }

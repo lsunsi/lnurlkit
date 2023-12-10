@@ -79,12 +79,12 @@ impl std::str::FromStr for Query {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        #[derive(miniserde::Deserialize)]
+        #[derive(serde::Deserialize)]
         struct Tag {
             tag: String,
         }
 
-        let tag = miniserde::json::from_str::<Tag>(s).map_err(|_| "deserialize tag failed")?;
+        let tag = serde_json::from_str::<Tag>(s).map_err(|_| "deserialize tag failed")?;
 
         if tag.tag == channel::TAG {
             let cr = s.parse().map_err(|_| "deserialize data failed")?;

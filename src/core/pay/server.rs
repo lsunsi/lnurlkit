@@ -16,7 +16,7 @@ impl std::fmt::Display for Query {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use base64::{prelude::BASE64_STANDARD, Engine};
 
-        let metadata = miniserde::json::to_string(
+        let metadata = serde_json::to_string(
             &[
                 Some(("text/plain", self.short_description.clone())),
                 self.long_description
@@ -36,22 +36,25 @@ impl std::fmt::Display for Query {
             .into_iter()
             .flatten()
             .collect::<Vec<_>>(),
-        );
+        )
+        .map_err(|_| std::fmt::Error)?;
 
-        f.write_str(&miniserde::json::to_string(&ser::Query {
+        let ser = serde_json::to_string(&ser::Query {
             tag: super::TAG,
             metadata,
-            callback: crate::serde::Url(std::borrow::Cow::Borrowed(&self.callback)),
+            callback: &self.callback,
             min_sendable: self.min,
             max_sendable: self.max,
             comment_allowed: self.comment_size.unwrap_or(0),
-        }))
+        });
+
+        f.write_str(&ser.map_err(|_| std::fmt::Error)?)
     }
 }
 
 pub struct CallbackRequest {
     pub millisatoshis: u64,
-    pub comment: Option<Box<str>>,
+    pub comment: Option<String>,
 }
 
 impl std::str::FromStr for CallbackRequest {
@@ -69,7 +72,7 @@ impl std::str::FromStr for CallbackRequest {
             .parse()
             .map_err(|_| "invalid amount")?;
 
-        let comment = qs.get("comment").map(|c| (*c).into());
+        let comment = qs.get("comment").map(|c| String::from(*c));
 
         Ok(CallbackRequest {
             millisatoshis,
@@ -117,20 +120,20 @@ impl std::fmt::Display for CallbackResponse {
             pr: &self.pr,
         };
 
-        f.write_str(&miniserde::json::to_string(&cr))
+        f.write_str(&serde_json::to_string(&cr).map_err(|_| std::fmt::Error)?)
     }
 }
 
 mod ser {
-    use crate::serde::Url;
-    use miniserde::Serialize;
+    use serde::Serialize;
     use std::collections::BTreeMap;
+    use url::Url;
 
     #[derive(Serialize)]
     pub(super) struct Query<'a> {
         pub tag: &'static str,
         pub metadata: String,
-        pub callback: Url<'a>,
+        pub callback: &'a Url,
         #[serde(rename = "minSendable")]
         pub min_sendable: u64,
         #[serde(rename = "maxSendable")]
@@ -291,7 +294,7 @@ mod tests {
         let parsed = input.parse::<super::CallbackRequest>().expect("parse");
 
         assert_eq!(parsed.millisatoshis, 314);
-        assert_eq!(&parsed.comment.unwrap() as &str, "comentario");
+        assert_eq!(parsed.comment.unwrap(), "comentario");
     }
 
     #[test]

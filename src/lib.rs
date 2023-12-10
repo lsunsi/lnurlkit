@@ -1,7 +1,6 @@
 #![cfg_attr(all(doc, docsrs), feature(doc_auto_cfg))]
 
 mod core;
-mod serde;
 
 #[cfg(feature = "server")]
 pub mod server;

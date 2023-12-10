@@ -1,8 +1,8 @@
 #[derive(Clone, Debug)]
 pub struct Query {
-    k1: Box<str>,
+    k1: String,
     callback: url::Url,
-    pub description: Box<str>,
+    pub description: String,
     pub min: u64,
     pub max: u64,
 }
@@ -11,12 +11,12 @@ impl std::str::FromStr for Query {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let d: de::Query = miniserde::json::from_str(s).map_err(|_| "deserialize failed")?;
+        let d: de::Query = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
 
         Ok(Query {
-            k1: d.k1.into_boxed_str(),
-            callback: d.callback.0.into_owned(),
-            description: d.default_description.into_boxed_str(),
+            k1: d.k1,
+            callback: d.callback,
+            description: d.default_description,
             min: d.min_withdrawable,
             max: d.max_withdrawable,
         })
@@ -52,7 +52,7 @@ impl std::fmt::Display for CallbackRequest<'_> {
 
 #[derive(Clone, Debug)]
 pub enum CallbackResponse {
-    Error { reason: Box<str> },
+    Error { reason: String },
     Ok,
 }
 
@@ -60,13 +60,13 @@ impl std::str::FromStr for CallbackResponse {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let map = miniserde::json::from_str::<std::collections::BTreeMap<String, String>>(s)
+        let map = serde_json::from_str::<std::collections::BTreeMap<String, String>>(s)
             .map_err(|_| "bad json")?;
 
         match map.get("status").map(|s| s as &str) {
             Some("OK") => Ok(CallbackResponse::Ok),
             Some("ERROR") => {
-                let reason = (map.get("reason").ok_or("error without reason")? as &str).into();
+                let reason = String::from(map.get("reason").ok_or("error without reason")?);
                 Ok(CallbackResponse::Error { reason })
             }
             _ => Err("bad status field"),
@@ -75,13 +75,13 @@ impl std::str::FromStr for CallbackResponse {
 }
 
 mod de {
-    use crate::serde::Url;
-    use miniserde::Deserialize;
+    use serde::Deserialize;
+    use url::Url;
 
     #[derive(Deserialize)]
     pub(super) struct Query {
         pub k1: String,
-        pub callback: Url<'static>,
+        pub callback: Url,
         #[serde(rename = "defaultDescription")]
         pub default_description: String,
         #[serde(rename = "minWithdrawable")]
@@ -106,8 +106,8 @@ mod tests {
         let parsed = input.parse::<super::Query>().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
-        assert_eq!(&parsed.description as &str, "verde com bolinhas");
-        assert_eq!(&parsed.k1 as &str, "caum");
+        assert_eq!(parsed.description, "verde com bolinhas");
+        assert_eq!(parsed.k1, "caum");
         assert_eq!(parsed.max, 315);
         assert_eq!(parsed.min, 314);
     }
@@ -139,7 +139,7 @@ mod tests {
 
         assert!(matches!(
             r#"{ "status": "ERROR", "reason": "razao" }"#.parse().unwrap(),
-            super::CallbackResponse::Error { reason } if &reason as &str == "razao"
+            super::CallbackResponse::Error { reason } if reason == "razao"
         ));
     }
 }
