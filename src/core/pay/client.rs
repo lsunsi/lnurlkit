@@ -1,6 +1,6 @@
 #[derive(Clone, Debug)]
 pub struct Response {
-    callback: url::Url,
+    pub callback: url::Url,
     pub metadata_raw: String,
     pub short_description: String,
     pub long_description: Option<String>,

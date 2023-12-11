@@ -1,8 +1,8 @@
 #[derive(Clone, Debug)]
 pub struct Response {
-    callback: url::Url,
+    pub callback: url::Url,
     pub uri: String,
-    k1: String,
+    pub k1: String,
 }
 
 impl std::str::FromStr for Response {

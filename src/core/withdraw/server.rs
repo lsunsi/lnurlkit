@@ -1,3 +1,4 @@
+#[derive(Clone, Debug)]
 pub struct Response {
     pub k1: String,
     pub callback: url::Url,

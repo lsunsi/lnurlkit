@@ -1,7 +1,7 @@
 #[derive(Clone, Debug)]
 pub struct Response {
-    k1: String,
-    callback: url::Url,
+    pub k1: String,
+    pub callback: url::Url,
     pub description: String,
     pub min: u64,
     pub max: u64,
