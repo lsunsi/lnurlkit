@@ -1,5 +1,5 @@
 #[derive(Clone, Debug)]
-pub struct Query {
+pub struct Response {
     callback: url::Url,
     pub metadata_raw: String,
     pub short_description: String,
@@ -13,14 +13,14 @@ pub struct Query {
     pub max: u64,
 }
 
-impl std::str::FromStr for Query {
+impl std::str::FromStr for Response {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use base64::{prelude::BASE64_STANDARD, Engine};
         use serde_json::Value;
 
-        let p: de::Query = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
+        let p: de::Response = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
 
         let metadata = serde_json::from_str::<Vec<(String, Value)>>(&p.metadata)
             .map_err(|_| "deserialize metadata failed")?;
@@ -74,7 +74,7 @@ impl std::str::FromStr for Query {
                 _ => None,
             });
 
-        Ok(Query {
+        Ok(Response {
             metadata_raw: p.metadata,
             callback: p.callback,
             comment_size: p.comment_allowed,
@@ -90,10 +90,14 @@ impl std::str::FromStr for Query {
     }
 }
 
-impl Query {
+impl Response {
     #[must_use]
-    pub fn callback<'a>(&'a self, millisatoshis: u64, comment: &'a str) -> CallbackRequest<'a> {
-        CallbackRequest {
+    pub fn callback<'a>(
+        &'a self,
+        millisatoshis: u64,
+        comment: Option<&'a str>,
+    ) -> CallbackQuery<'a> {
+        CallbackQuery {
             url: &self.callback,
             millisatoshis,
             comment,
@@ -101,26 +105,22 @@ impl Query {
     }
 }
 
-pub struct CallbackRequest<'a> {
+pub struct CallbackQuery<'a> {
     pub url: &'a url::Url,
-    pub comment: &'a str,
+    pub comment: Option<&'a str>,
     pub millisatoshis: u64,
 }
 
-impl std::fmt::Display for CallbackRequest<'_> {
+impl std::fmt::Display for CallbackQuery<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let millisatoshis = self.millisatoshis.to_string();
+        let query = super::serde::CallbackQuery {
+            comment: self.comment,
+            amount: self.millisatoshis,
+        };
 
-        let query = [
-            (!self.comment.is_empty()).then_some(("comment", self.comment)),
-            Some(("amount", &millisatoshis)),
-        ];
-
-        let mut url = self.url.clone();
-        url.query_pairs_mut()
-            .extend_pairs(query.into_iter().flatten());
-
-        f.write_str(url.as_str())
+        let querystr = serde_urlencoded::to_string(query).map_err(|_| std::fmt::Error)?;
+        let sep = if self.url.query().is_some() { '&' } else { '?' };
+        write!(f, "{}{sep}{querystr}", self.url)
     }
 }
 
@@ -169,7 +169,7 @@ mod de {
     use url::Url;
 
     #[derive(Deserialize)]
-    pub(super) struct Query {
+    pub(super) struct Response {
         pub metadata: String,
         pub callback: Url,
         #[serde(rename = "minSendable")]
@@ -192,7 +192,7 @@ mod de {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn query_parse_base() {
+    fn response_parse_base() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/crazy\", \"👋🇧🇴💾\"]]",
@@ -200,7 +200,7 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.short_description, "boneco do steve magal");
@@ -220,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    fn query_parse_comment_size() {
+    fn response_parse_comment_size() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
@@ -229,12 +229,12 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
         assert_eq!(parsed.comment_size.unwrap(), 140);
     }
 
     #[test]
-    fn query_parse_long_description() {
+    fn response_parse_long_description() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/long-desc\", \"mochila a jato brutal incluida\"]]",
@@ -242,7 +242,7 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
         assert_eq!(
             parsed.long_description.unwrap(),
             "mochila a jato brutal incluida"
@@ -250,7 +250,7 @@ mod tests {
     }
 
     #[test]
-    fn query_parse_images() {
+    fn response_parse_images() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"image/png;base64\", \"Zm90b2JydXRhbA==\"],[\"image/jpeg;base64\", \"aW1hZ2VtYnJ1dGFs\"]]",
@@ -258,13 +258,13 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
         assert_eq!(parsed.jpeg.unwrap(), b"imagembrutal");
         assert_eq!(parsed.png.unwrap(), b"fotobrutal");
     }
 
     #[test]
-    fn query_parse_identifier() {
+    fn response_parse_identifier() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/identifier\", \"steve@magal.brutal\"]]",
@@ -272,12 +272,12 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
         assert_eq!(parsed.identifier.unwrap(), "steve@magal.brutal");
     }
 
     #[test]
-    fn query_parse_email() {
+    fn response_parse_email() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/email\", \"steve@magal.brutal\"]]",
@@ -285,12 +285,12 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
         assert_eq!(parsed.email.unwrap(), "steve@magal.brutal");
     }
 
     #[test]
-    fn callback_request_render_base() {
+    fn callback_query_render_base() {
         let input = r#"{
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
             "callback": "https://yuri?o=callback",
@@ -298,16 +298,16 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
 
         assert_eq!(
-            parsed.callback(314, "").to_string(),
+            parsed.callback(314, None).to_string(),
             "https://yuri/?o=callback&amount=314"
         );
     }
 
     #[test]
-    fn callback_request_render_comment() {
+    fn callback_query_render_comment() {
         let input = r#"{
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
             "callback": "https://yuri?o=callback",
@@ -315,10 +315,10 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
 
         assert_eq!(
-            parsed.callback(314, "comentario").to_string(),
+            parsed.callback(314, Some("comentario")).to_string(),
             "https://yuri/?o=callback&comment=comentario&amount=314"
         );
     }

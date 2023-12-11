@@ -13,7 +13,7 @@ async fn test() {
             move |identifier: Option<String>| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::pay::server::Query {
+                    Ok(lnurlkit::pay::server::Response {
                         callback,
                         short_description: String::from("today i become death"),
                         long_description: Some(String::from("the destroyer of worlds")),
@@ -27,7 +27,7 @@ async fn test() {
                     })
                 }
             },
-            |req: lnurlkit::pay::server::CallbackRequest| async move {
+            |req: lnurlkit::pay::server::CallbackQuery| async move {
                 Ok(lnurlkit::pay::server::CallbackResponse {
                     pr: format!("pierre:{}", req.millisatoshis),
                     disposable: false,
@@ -55,7 +55,7 @@ async fn test() {
     .expect("bech32");
 
     let queried = client.query(&bech32).await.expect("query");
-    let lnurlkit::client::Query::Pay(pr) = queried else {
+    let lnurlkit::client::Response::Pay(pr) = queried else {
         panic!("not pay request");
     };
 
@@ -73,7 +73,7 @@ async fn test() {
     .expect("bech32");
 
     let queried = client.query(&bech32).await.expect("query");
-    let lnurlkit::client::Query::Pay(pr) = queried else {
+    let lnurlkit::client::Response::Pay(pr) = queried else {
         panic!("not pay request");
     };
 

@@ -14,7 +14,7 @@ async fn test() {
             move |_| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::pay::server::Query {
+                    Ok(lnurlkit::pay::server::Response {
                         callback,
                         short_description: String::new(),
                         long_description: None,
@@ -28,7 +28,7 @@ async fn test() {
                     })
                 }
             },
-            |req: lnurlkit::pay::server::CallbackRequest| async move {
+            |req: lnurlkit::pay::server::CallbackQuery| async move {
                 Ok(lnurlkit::pay::server::CallbackResponse {
                     pr: String::new(),
                     disposable: false,
@@ -63,15 +63,15 @@ async fn test() {
     .expect("lnurl");
 
     let queried = client.query(&lnurl).await.expect("query");
-    let lnurlkit::client::Query::Pay(pr) = queried else {
+    let lnurlkit::client::Response::Pay(pr) = queried else {
         panic!("not pay request");
     };
 
-    let invoice = pr.callback(0, "").await.expect("callback");
+    let invoice = pr.callback(0, None).await.expect("callback");
 
     assert!(invoice.success_action.is_none());
 
-    let invoice = pr.callback(1, "mensagem").await.expect("callback");
+    let invoice = pr.callback(1, Some("mensagem")).await.expect("callback");
 
     let Some(lnurlkit::pay::client::SuccessAction::Message(m)) = invoice.success_action else {
         panic!("bad success action");
@@ -79,7 +79,7 @@ async fn test() {
 
     assert_eq!(&m as &str, "mensagem");
 
-    let invoice = pr.callback(2, "descricao").await.expect("callback");
+    let invoice = pr.callback(2, Some("descricao")).await.expect("callback");
 
     let Some(lnurlkit::pay::client::SuccessAction::Url(u, d)) = invoice.success_action else {
         panic!("bad success action");

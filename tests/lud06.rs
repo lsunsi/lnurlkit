@@ -14,7 +14,7 @@ async fn test() {
             move |_| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::pay::server::Query {
+                    Ok(lnurlkit::pay::server::Response {
                         callback,
                         short_description: String::from("today i become death"),
                         long_description: Some(String::from("the destroyer of worlds")),
@@ -28,7 +28,7 @@ async fn test() {
                     })
                 }
             },
-            |req: lnurlkit::pay::server::CallbackRequest| async move {
+            |req: lnurlkit::pay::server::CallbackQuery| async move {
                 Ok(lnurlkit::pay::server::CallbackResponse {
                     pr: format!("pierre:{}", req.millisatoshis),
                     disposable: false,
@@ -52,7 +52,7 @@ async fn test() {
     .expect("lnurl");
 
     let queried = client.query(&lnurl).await.expect("query");
-    let lnurlkit::client::Query::Pay(pr) = queried else {
+    let lnurlkit::client::Response::Pay(pr) = queried else {
         panic!("not pay request");
     };
 
@@ -64,7 +64,7 @@ async fn test() {
         "the destroyer of worlds"
     );
 
-    let invoice = pr.callback(314, "comment").await.expect("callback");
+    let invoice = pr.callback(314, Some("comment")).await.expect("callback");
 
     assert_eq!(&invoice.pr as &str, "pierre:314");
 }

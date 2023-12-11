@@ -14,7 +14,7 @@ async fn test() {
             move |()| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::withdraw::server::Query {
+                    Ok(lnurlkit::withdraw::server::Response {
                         description: String::from("descricao"),
                         k1: String::from("caum"),
                         callback,
@@ -23,7 +23,7 @@ async fn test() {
                     })
                 }
             },
-            |req: lnurlkit::withdraw::server::CallbackRequest| async move {
+            |req: lnurlkit::withdraw::server::CallbackQuery| async move {
                 Ok(if &req.pr as &str == "pierre" {
                     lnurlkit::withdraw::server::CallbackResponse::Ok
                 } else {
@@ -49,7 +49,7 @@ async fn test() {
     .expect("lnurl");
 
     let queried = client.query(&lnurl).await.expect("query");
-    let lnurlkit::client::Query::Withdraw(wr) = queried else {
+    let lnurlkit::client::Response::Withdraw(wr) = queried else {
         panic!("not pay request");
     };
 

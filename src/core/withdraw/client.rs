@@ -1,5 +1,5 @@
 #[derive(Clone, Debug)]
-pub struct Query {
+pub struct Response {
     k1: String,
     callback: url::Url,
     pub description: String,
@@ -7,13 +7,13 @@ pub struct Query {
     pub max: u64,
 }
 
-impl std::str::FromStr for Query {
+impl std::str::FromStr for Response {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let d: de::Query = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
+        let d: de::Response = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
 
-        Ok(Query {
+        Ok(Response {
             k1: d.k1,
             callback: d.callback,
             description: d.default_description,
@@ -23,10 +23,10 @@ impl std::str::FromStr for Query {
     }
 }
 
-impl Query {
+impl Response {
     #[must_use]
-    pub fn callback<'a>(&'a self, pr: &'a str) -> CallbackRequest {
-        CallbackRequest {
+    pub fn callback<'a>(&'a self, pr: &'a str) -> CallbackQuery {
+        CallbackQuery {
             url: &self.callback,
             k1: &self.k1,
             pr,
@@ -35,18 +35,22 @@ impl Query {
 }
 
 #[derive(Clone, Debug)]
-pub struct CallbackRequest<'a> {
+pub struct CallbackQuery<'a> {
     pub url: &'a url::Url,
     pub k1: &'a str,
     pub pr: &'a str,
 }
 
-impl std::fmt::Display for CallbackRequest<'_> {
+impl std::fmt::Display for CallbackQuery<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut url = self.url.clone();
-        let query = [("k1", self.k1), ("pr", self.pr)];
-        url.query_pairs_mut().extend_pairs(query);
-        f.write_str(url.as_str())
+        let query = super::serde::CallbackQuery {
+            k1: self.k1,
+            pr: self.pr,
+        };
+
+        let querystr = serde_urlencoded::to_string(query).map_err(|_| std::fmt::Error)?;
+        let sep = if self.url.query().is_some() { '&' } else { '?' };
+        write!(f, "{}{sep}{querystr}", self.url)
     }
 }
 
@@ -79,7 +83,7 @@ mod de {
     use url::Url;
 
     #[derive(Deserialize)]
-    pub(super) struct Query {
+    pub(super) struct Response {
         pub k1: String,
         pub callback: Url,
         #[serde(rename = "defaultDescription")]
@@ -94,7 +98,7 @@ mod de {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn query_parse() {
+    fn response_parse() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "defaultDescription": "verde com bolinhas",
@@ -103,7 +107,7 @@ mod tests {
             "k1": "caum"
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.description, "verde com bolinhas");
@@ -113,7 +117,7 @@ mod tests {
     }
 
     #[test]
-    fn callback_request_render() {
+    fn callback_query_render() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "defaultDescription": "verde com bolinhas",
@@ -122,7 +126,7 @@ mod tests {
             "k1": "caum"
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
 
         assert_eq!(
             parsed.callback("pierre").to_string(),

@@ -1,4 +1,4 @@
-pub struct Query {
+pub struct Response {
     pub k1: String,
     pub callback: url::Url,
     pub description: String,
@@ -6,9 +6,9 @@ pub struct Query {
     pub max: u64,
 }
 
-impl std::fmt::Display for Query {
+impl std::fmt::Display for Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let ser = serde_json::to_string(&ser::Query {
+        let ser = serde_json::to_string(&ser::Response {
             tag: super::TAG,
             callback: &self.callback,
             default_description: &self.description,
@@ -20,24 +20,21 @@ impl std::fmt::Display for Query {
     }
 }
 
-pub struct CallbackRequest {
+pub struct CallbackQuery {
     pub k1: String,
     pub pr: String,
 }
 
-impl std::str::FromStr for CallbackRequest {
-    type Err = &'static str;
+impl<'a> TryFrom<&'a str> for CallbackQuery {
+    type Error = &'static str;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let qs = s
-            .split('&')
-            .filter_map(|s| s.split_once('='))
-            .collect::<std::collections::HashMap<_, _>>();
-
-        let k1 = String::from(*qs.get("k1").ok_or("missing k1")?);
-        let pr = String::from(*qs.get("pr").ok_or("missing pr")?);
-
-        Ok(CallbackRequest { k1, pr })
+    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
+        serde_urlencoded::from_str::<super::serde::CallbackQuery>(s)
+            .map_err(|_| "deserialize failed")
+            .map(|query| CallbackQuery {
+                k1: String::from(query.k1),
+                pr: String::from(query.pr),
+            })
     }
 }
 
@@ -71,7 +68,7 @@ mod ser {
     use url::Url;
 
     #[derive(Serialize)]
-    pub(super) struct Query<'a> {
+    pub(super) struct Response<'a> {
         pub tag: &'static str,
         pub k1: &'a str,
         pub callback: &'a Url,
@@ -87,8 +84,8 @@ mod ser {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn query_render() {
-        let query = super::Query {
+    fn response_render() {
+        let query = super::Response {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             description: String::from("verde com bolinhas"),
             k1: String::from("caum"),
@@ -103,9 +100,9 @@ mod tests {
     }
 
     #[test]
-    fn callback_request_parse() {
+    fn callback_query_parse() {
         let input = "k1=caum&pr=pierre";
-        let parsed = input.parse::<super::CallbackRequest>().expect("parse");
+        let parsed: super::CallbackQuery = input.try_into().expect("parse");
 
         assert_eq!(parsed.pr, "pierre");
         assert_eq!(parsed.k1, "caum");

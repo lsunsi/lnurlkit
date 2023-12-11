@@ -69,13 +69,13 @@ fn resolve_address(s: &str) -> Result<url::Url, &'static str> {
 }
 
 #[derive(Debug)]
-pub enum Query {
-    Channel(channel::client::Query),
-    Pay(pay::client::Query),
-    Withdraw(withdraw::client::Query),
+pub enum Response {
+    Channel(channel::client::Response),
+    Pay(pay::client::Response),
+    Withdraw(withdraw::client::Response),
 }
 
-impl std::str::FromStr for Query {
+impl std::str::FromStr for Response {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -88,13 +88,13 @@ impl std::str::FromStr for Query {
 
         if tag.tag == channel::TAG {
             let cr = s.parse().map_err(|_| "deserialize data failed")?;
-            Ok(Query::Channel(cr))
+            Ok(Response::Channel(cr))
         } else if tag.tag == pay::TAG {
             let pr = s.parse().map_err(|_| "deserialize data failed")?;
-            Ok(Query::Pay(pr))
+            Ok(Response::Pay(pr))
         } else if tag.tag == withdraw::TAG {
             let wr = s.parse().map_err(|_| "deserialize data failed")?;
-            Ok(Query::Withdraw(wr))
+            Ok(Response::Withdraw(wr))
         } else {
             Err("unknown tag")
         }

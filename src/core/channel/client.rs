@@ -1,17 +1,17 @@
 #[derive(Clone, Debug)]
-pub struct Query {
+pub struct Response {
     callback: url::Url,
     pub uri: String,
     k1: String,
 }
 
-impl std::str::FromStr for Query {
+impl std::str::FromStr for Response {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let d: de::Query = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
+        let d: de::Response = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
 
-        Ok(Query {
+        Ok(Response {
             callback: d.callback,
             uri: d.uri,
             k1: d.k1,
@@ -19,10 +19,10 @@ impl std::str::FromStr for Query {
     }
 }
 
-impl Query {
+impl Response {
     #[must_use]
-    pub fn callback_accept<'a>(&'a self, remoteid: &'a str, private: bool) -> CallbackRequest<'a> {
-        CallbackRequest::Accept {
+    pub fn callback_accept<'a>(&'a self, remoteid: &'a str, private: bool) -> CallbackQuery<'a> {
+        CallbackQuery::Accept {
             url: &self.callback,
             k1: &self.k1,
             remoteid,
@@ -31,8 +31,8 @@ impl Query {
     }
 
     #[must_use]
-    pub fn callback_cancel<'a>(&'a self, remoteid: &'a str) -> CallbackRequest<'a> {
-        CallbackRequest::Cancel {
+    pub fn callback_cancel<'a>(&'a self, remoteid: &'a str) -> CallbackQuery<'a> {
+        CallbackQuery::Cancel {
             url: &self.callback,
             k1: &self.k1,
             remoteid,
@@ -41,46 +41,53 @@ impl Query {
 }
 
 #[derive(Clone, Debug)]
-pub enum CallbackRequest<'a> {
+pub enum CallbackQuery<'a> {
     Accept {
         url: &'a url::Url,
-        remoteid: &'a str,
         k1: &'a str,
+        remoteid: &'a str,
         private: bool,
     },
     Cancel {
         url: &'a url::Url,
-        remoteid: &'a str,
         k1: &'a str,
+        remoteid: &'a str,
     },
 }
 
-impl std::fmt::Display for CallbackRequest<'_> {
+impl std::fmt::Display for CallbackQuery<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CallbackRequest::Cancel { url, remoteid, k1 } => {
-                let mut url = (*url).clone();
-                let query = [("k1", *k1), ("remoteid", remoteid), ("cancel", "1")];
-                url.query_pairs_mut().extend_pairs(query);
-                f.write_str(url.as_str())
-            }
-            CallbackRequest::Accept {
+        let (url, query) = match self {
+            CallbackQuery::Accept {
                 url,
+                k1,
                 remoteid,
                 private,
-                k1,
-            } => {
-                let query = [
-                    ("k1", *k1),
-                    ("remoteid", remoteid),
-                    ("private", if *private { "1" } else { "0" }),
-                ];
+            } => (
+                url,
+                super::serde::CallbackQuery::Accept {
+                    k1,
+                    remoteid,
+                    private: if *private {
+                        super::serde::ZeroOrOne::One
+                    } else {
+                        super::serde::ZeroOrOne::Zero
+                    },
+                },
+            ),
+            CallbackQuery::Cancel { url, k1, remoteid } => (
+                url,
+                super::serde::CallbackQuery::Cancel {
+                    k1,
+                    remoteid,
+                    cancel: super::serde::OneOnly::One,
+                },
+            ),
+        };
 
-                let mut url = (*url).clone();
-                url.query_pairs_mut().extend_pairs(query);
-                f.write_str(url.as_str())
-            }
-        }
+        let querystr = serde_urlencoded::to_string(query).map_err(|_| std::fmt::Error)?;
+        let sep = if url.query().is_some() { '&' } else { '?' };
+        write!(f, "{url}{sep}{querystr}")
     }
 }
 
@@ -113,7 +120,7 @@ mod de {
     use url::Url;
 
     #[derive(Deserialize)]
-    pub(super) struct Query {
+    pub(super) struct Response {
         pub callback: Url,
         pub uri: String,
         pub k1: String,
@@ -123,14 +130,14 @@ mod de {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn query_parse() {
+    fn response_parse() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "uri": "noh@ipe:porta",
             "k1": "caum"
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
 
         assert_eq!(parsed.callback.as_str(), "https://yuri/?o=callback");
         assert_eq!(parsed.uri, "noh@ipe:porta");
@@ -138,14 +145,14 @@ mod tests {
     }
 
     #[test]
-    fn callback_request_accept_render() {
+    fn callback_query_accept_render() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "uri": "noh@ipe:porta",
             "k1": "caum"
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
         let url = parsed.callback_accept("idremoto", true);
 
         assert_eq!(
@@ -162,14 +169,14 @@ mod tests {
     }
 
     #[test]
-    fn callback_request_cancel_render() {
+    fn callback_query_cancel_render() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "uri": "noh@ipe:porta",
             "k1": "caum"
         }"#;
 
-        let parsed = input.parse::<super::Query>().expect("parse");
+        let parsed = input.parse::<super::Response>().expect("parse");
         let url = parsed.callback_cancel("idremoto");
 
         assert_eq!(

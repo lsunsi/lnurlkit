@@ -1,8 +1,8 @@
 mod pay_request {
     #[test]
     fn alby() {
-        let Ok(lnurlkit::Query::Pay(pr)) =
-            include_str!("../fixtures/alby-pay.json").parse::<lnurlkit::Query>()
+        let Ok(lnurlkit::Response::Pay(pr)) =
+            include_str!("../fixtures/alby-pay.json").parse::<lnurlkit::Response>()
         else {
             panic!("parse");
         };
@@ -18,15 +18,15 @@ mod pay_request {
         assert!(pr.png.is_none());
 
         assert_eq!(
-            pr.callback(314, "").to_string(),
+            pr.callback(314, None).to_string(),
             "https://getalby.com/lnurlp/lorenzo/callback?amount=314"
         );
     }
 
     #[test]
     fn blink() {
-        let Ok(lnurlkit::Query::Pay(pr)) =
-            include_str!("../fixtures/blink-pay.json").parse::<lnurlkit::Query>()
+        let Ok(lnurlkit::Response::Pay(pr)) =
+            include_str!("../fixtures/blink-pay.json").parse::<lnurlkit::Response>()
         else {
             panic!("parse");
         };
@@ -42,15 +42,15 @@ mod pay_request {
         assert!(pr.png.is_none());
 
         assert_eq!(
-            pr.callback(314, "").to_string(),
+            pr.callback(314, None).to_string(),
             "https://pay.mainnet.galoy.io/lnurlp/lorenzo/callback?amount=314"
         );
     }
 
     #[test]
     fn bipa() {
-        let Ok(lnurlkit::Query::Pay(pr)) =
-            include_str!("../fixtures/bipa-pay.json").parse::<lnurlkit::Query>()
+        let Ok(lnurlkit::Response::Pay(pr)) =
+            include_str!("../fixtures/bipa-pay.json").parse::<lnurlkit::Response>()
         else {
             panic!("parse");
         };
@@ -66,15 +66,15 @@ mod pay_request {
         assert_eq!(pr.png.as_ref().unwrap().len(), 54697);
 
         assert_eq!(
-            pr.callback(314, "").to_string(),
+            pr.callback(314, None).to_string(),
             "https://api.bipa.app/ln/request/invoice/kenu/1701784379/50n3BjOSWb1ZrxE9WmRcqlk2ylDzUJ1Q_GHN0pk_Q7Q/P6IMTO82jj6W21mUvXNgIlGmqGibx8MiaWfSjQ2wI88?amount=314"
         );
     }
 
     #[test]
     fn pouch() {
-        let Ok(lnurlkit::Query::Pay(pr)) =
-            include_str!("../fixtures/pouch-pay.json").parse::<lnurlkit::Query>()
+        let Ok(lnurlkit::Response::Pay(pr)) =
+            include_str!("../fixtures/pouch-pay.json").parse::<lnurlkit::Response>()
         else {
             panic!("parse");
         };
@@ -90,15 +90,15 @@ mod pay_request {
         assert!(pr.png.is_none());
 
         assert_eq!(
-            pr.callback(314, "").to_string(),
+            pr.callback(314, None).to_string(),
             "https://app.pouch.ph/api/v2/lnurl/pay/ethan?amount=314"
         );
     }
 
     #[test]
     fn walletofsatoshi() {
-        let Ok(lnurlkit::Query::Pay(pr)) =
-            include_str!("../fixtures/walletofsatoshi-pay.json").parse::<lnurlkit::Query>()
+        let Ok(lnurlkit::Response::Pay(pr)) =
+            include_str!("../fixtures/walletofsatoshi-pay.json").parse::<lnurlkit::Response>()
         else {
             panic!("parse");
         };
@@ -117,15 +117,15 @@ mod pay_request {
         assert!(pr.png.is_none());
 
         assert_eq!(
-            pr.callback(314, "").to_string(),
+            pr.callback(314, None).to_string(),
             "https://livingroomofsatoshi.com/api/v1/lnurl/payreq/0e7f30e3-e74d-410d-bf86-50d101715e81?amount=314"
         );
     }
 
     #[test]
     fn zebedee() {
-        let Ok(lnurlkit::Query::Pay(pr)) =
-            include_str!("../fixtures/zebedee-pay.json").parse::<lnurlkit::Query>()
+        let Ok(lnurlkit::Response::Pay(pr)) =
+            include_str!("../fixtures/zebedee-pay.json").parse::<lnurlkit::Response>()
         else {
             panic!("parse");
         };
@@ -141,7 +141,7 @@ mod pay_request {
         assert_eq!(pr.png.as_ref().unwrap().len(), 3993);
 
         assert_eq!(
-            pr.callback(314, "").to_string(),
+            pr.callback(314, None).to_string(),
             "https://api.zebedee.io/v0/process-static-charges/8d648ac7-09f6-400c-8479-d05ac4d9d61d?amount=314"
         );
     }

@@ -14,16 +14,16 @@ async fn test() {
             move |()| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::channel::server::Query {
+                    Ok(lnurlkit::channel::server::Response {
                         uri: String::from("u@r:i"),
                         k1: String::from("caum"),
                         callback,
                     })
                 }
             },
-            |req: lnurlkit::channel::server::CallbackRequest| async move {
+            |req: lnurlkit::channel::server::CallbackQuery| async move {
                 Ok(match req {
-                    lnurlkit::channel::server::CallbackRequest::Cancel { remoteid, k1 } => {
+                    lnurlkit::channel::server::CallbackQuery::Cancel { remoteid, k1 } => {
                         if &remoteid as &str == "idremoto" {
                             lnurlkit::channel::server::CallbackResponse::Ok
                         } else {
@@ -31,7 +31,7 @@ async fn test() {
                             lnurlkit::channel::server::CallbackResponse::Error { reason }
                         }
                     }
-                    lnurlkit::channel::server::CallbackRequest::Accept {
+                    lnurlkit::channel::server::CallbackQuery::Accept {
                         remoteid,
                         private,
                         k1,
@@ -58,7 +58,7 @@ async fn test() {
     .expect("lnurl");
 
     let queried = client.query(&lnurl).await.expect("query");
-    let lnurlkit::client::Query::Channel(cr) = queried else {
+    let lnurlkit::client::Response::Channel(cr) = queried else {
         panic!("not pay request");
     };
 

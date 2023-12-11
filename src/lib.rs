@@ -1,17 +1,16 @@
 #![cfg_attr(all(doc, docsrs), feature(doc_auto_cfg))]
 
 mod core;
-
-#[cfg(feature = "server")]
-pub mod server;
+pub use core::{channel, pay, resolve, withdraw, Response};
 
 #[cfg(feature = "client")]
 pub mod client;
 
-pub use core::{channel, pay, resolve, withdraw, Query};
+#[cfg(feature = "client")]
+pub use client::Client;
+
+#[cfg(feature = "server")]
+pub mod server;
 
 #[cfg(feature = "server")]
 pub use server::Server;
-
-#[cfg(feature = "client")]
-pub use client::Client;

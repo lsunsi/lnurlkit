@@ -1,5 +1,5 @@
 #[derive(Clone, Debug)]
-pub struct Query {
+pub struct Response {
     pub callback: url::Url,
     pub short_description: String,
     pub long_description: Option<String>,
@@ -12,7 +12,7 @@ pub struct Query {
     pub max: u64,
 }
 
-impl std::fmt::Display for Query {
+impl std::fmt::Display for Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use base64::{prelude::BASE64_STANDARD, Engine};
 
@@ -39,7 +39,7 @@ impl std::fmt::Display for Query {
         )
         .map_err(|_| std::fmt::Error)?;
 
-        let ser = serde_json::to_string(&ser::Query {
+        let ser = serde_json::to_string(&ser::Response {
             tag: super::TAG,
             metadata,
             callback: &self.callback,
@@ -52,32 +52,21 @@ impl std::fmt::Display for Query {
     }
 }
 
-pub struct CallbackRequest {
+pub struct CallbackQuery {
     pub millisatoshis: u64,
     pub comment: Option<String>,
 }
 
-impl std::str::FromStr for CallbackRequest {
-    type Err = &'static str;
+impl<'a> TryFrom<&'a str> for CallbackQuery {
+    type Error = &'static str;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let qs = s
-            .split('&')
-            .filter_map(|s| s.split_once('='))
-            .collect::<std::collections::HashMap<_, _>>();
-
-        let millisatoshis = qs
-            .get("amount")
-            .ok_or("missing amount")?
-            .parse()
-            .map_err(|_| "invalid amount")?;
-
-        let comment = qs.get("comment").map(|c| String::from(*c));
-
-        Ok(CallbackRequest {
-            millisatoshis,
-            comment,
-        })
+    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
+        serde_urlencoded::from_str::<super::serde::CallbackQuery>(s)
+            .map_err(|_| "deserialize failed")
+            .map(|query| CallbackQuery {
+                millisatoshis: query.amount,
+                comment: query.comment.map(String::from),
+            })
     }
 }
 
@@ -130,7 +119,7 @@ mod ser {
     use url::Url;
 
     #[derive(Serialize)]
-    pub(super) struct Query<'a> {
+    pub(super) struct Response<'a> {
         pub tag: &'static str,
         pub metadata: String,
         pub callback: &'a Url,
@@ -154,8 +143,8 @@ mod ser {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn query_render_base() {
-        let query = super::Query {
+    fn response_render_base() {
+        let query = super::Response {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             short_description: String::from("boneco do steve magal"),
             long_description: None,
@@ -175,8 +164,8 @@ mod tests {
     }
 
     #[test]
-    fn query_render_comment_size() {
-        let query = super::Query {
+    fn response_render_comment_size() {
+        let query = super::Response {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             short_description: String::from("boneco do steve magal"),
             long_description: None,
@@ -196,8 +185,8 @@ mod tests {
     }
 
     #[test]
-    fn query_render_long_description() {
-        let query = super::Query {
+    fn response_render_long_description() {
+        let query = super::Response {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             short_description: String::from("boneco do steve magal"),
             long_description: Some(String::from("mochila a jato brutal incluida")),
@@ -217,8 +206,8 @@ mod tests {
     }
 
     #[test]
-    fn query_render_images() {
-        let query = super::Query {
+    fn response_render_images() {
+        let query = super::Response {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             short_description: String::from("boneco do steve magal"),
             long_description: None,
@@ -238,8 +227,8 @@ mod tests {
     }
 
     #[test]
-    fn query_render_identifier() {
-        let query = super::Query {
+    fn response_render_identifier() {
+        let query = super::Response {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             short_description: String::from("boneco do steve magal"),
             long_description: None,
@@ -259,8 +248,8 @@ mod tests {
     }
 
     #[test]
-    fn query_render_email() {
-        let query = super::Query {
+    fn response_render_email() {
+        let query = super::Response {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             short_description: String::from("boneco do steve magal"),
             long_description: None,
@@ -280,18 +269,18 @@ mod tests {
     }
 
     #[test]
-    fn callback_request_parse_base() {
+    fn callback_query_parse_base() {
         let input = "amount=314";
-        let parsed = input.parse::<super::CallbackRequest>().expect("parse");
+        let parsed: super::CallbackQuery = input.try_into().expect("parse");
 
         assert_eq!(parsed.millisatoshis, 314);
         assert!(parsed.comment.is_none());
     }
 
     #[test]
-    fn callback_request_parse_comment() {
+    fn callback_query_parse_comment() {
         let input = "amount=314&comment=comentario";
-        let parsed = input.parse::<super::CallbackRequest>().expect("parse");
+        let parsed: super::CallbackQuery = input.try_into().expect("parse");
 
         assert_eq!(parsed.millisatoshis, 314);
         assert_eq!(parsed.comment.unwrap(), "comentario");

@@ -5,25 +5,25 @@ impl Client {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
-    pub async fn query(&self, s: &str) -> Result<Query, &'static str> {
+    pub async fn query(&self, s: &str) -> Result<Response, &'static str> {
         let url = crate::resolve(s)?;
 
         let client = &self.0;
         let response = client.get(url).send().await.map_err(|_| "request failed")?;
         let text = response.text().await.map_err(|_| "body failed")?;
 
-        text.parse::<crate::Query>()
+        text.parse::<crate::Response>()
             .map_err(|_| "parse failed")
             .map(|query| match query {
-                crate::Query::Channel(core) => Query::Channel(Channel { client, core }),
-                crate::Query::Pay(core) => Query::Pay(Pay { client, core }),
-                crate::Query::Withdraw(core) => Query::Withdraw(Withdraw { client, core }),
+                crate::Response::Channel(core) => Response::Channel(Channel { client, core }),
+                crate::Response::Pay(core) => Response::Pay(Pay { client, core }),
+                crate::Response::Withdraw(core) => Response::Withdraw(Withdraw { client, core }),
             })
     }
 }
 
 #[derive(Clone, Debug)]
-pub enum Query<'a> {
+pub enum Response<'a> {
     Channel(Channel<'a>),
     Pay(Pay<'a>),
     Withdraw(Withdraw<'a>),
@@ -32,19 +32,19 @@ pub enum Query<'a> {
 #[derive(Clone, Debug)]
 pub struct Channel<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::channel::client::Query,
+    pub core: crate::channel::client::Response,
 }
 
 #[derive(Clone, Debug)]
 pub struct Pay<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::pay::client::Query,
+    pub core: crate::pay::client::Response,
 }
 
 #[derive(Clone, Debug)]
 pub struct Withdraw<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::withdraw::client::Query,
+    pub core: crate::withdraw::client::Response,
 }
 
 impl Channel<'_> {
@@ -97,7 +97,7 @@ impl Pay<'_> {
     pub async fn callback(
         &self,
         millisatoshis: u64,
-        comment: &str,
+        comment: Option<&str>,
     ) -> Result<crate::pay::client::CallbackResponse, &'static str> {
         let callback = self.core.callback(millisatoshis, comment);
 

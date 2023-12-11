@@ -18,21 +18,21 @@ pub struct Server<CQ, CC, PQ, PC, WQ, WC> {
 impl Default
     for Server<
         // Channel Request
-        unimplemented::Handler<(), crate::channel::server::Query>,
+        unimplemented::Handler<(), crate::channel::server::Response>,
         unimplemented::Handler<
-            crate::channel::server::CallbackRequest,
+            crate::channel::server::CallbackQuery,
             crate::channel::server::CallbackResponse,
         >,
         // Pay Request
-        unimplemented::Handler<Option<String>, crate::pay::server::Query>,
+        unimplemented::Handler<Option<String>, crate::pay::server::Response>,
         unimplemented::Handler<
-            crate::pay::server::CallbackRequest,
+            crate::pay::server::CallbackQuery,
             crate::pay::server::CallbackResponse,
         >,
         // Withdraw Request
-        unimplemented::Handler<(), crate::withdraw::server::Query>,
+        unimplemented::Handler<(), crate::withdraw::server::Response>,
         unimplemented::Handler<
-            crate::withdraw::server::CallbackRequest,
+            crate::withdraw::server::CallbackQuery,
             crate::withdraw::server::CallbackResponse,
         >,
     >
@@ -102,21 +102,21 @@ impl<CQ, CQFut, CC, CCFut, PQ, PQFut, PC, PCFut, WQ, WQFut, WC, WCFut>
     Server<CQ, CC, PQ, PC, WQ, WC>
 where
     CQ: 'static + Send + Clone + Fn(()) -> CQFut,
-    CQFut: Send + Future<Output = Result<crate::channel::server::Query, StatusCode>>,
+    CQFut: Send + Future<Output = Result<crate::channel::server::Response, StatusCode>>,
 
-    CC: 'static + Send + Clone + Fn(crate::channel::server::CallbackRequest) -> CCFut,
+    CC: 'static + Send + Clone + Fn(crate::channel::server::CallbackQuery) -> CCFut,
     CCFut: Send + Future<Output = Result<crate::channel::server::CallbackResponse, StatusCode>>,
 
     PQ: 'static + Send + Clone + Fn(Option<String>) -> PQFut,
-    PQFut: Send + Future<Output = Result<crate::pay::server::Query, StatusCode>>,
+    PQFut: Send + Future<Output = Result<crate::pay::server::Response, StatusCode>>,
 
-    PC: 'static + Send + Clone + Fn(crate::pay::server::CallbackRequest) -> PCFut,
+    PC: 'static + Send + Clone + Fn(crate::pay::server::CallbackQuery) -> PCFut,
     PCFut: Send + Future<Output = Result<crate::pay::server::CallbackResponse, StatusCode>>,
 
     WQ: 'static + Send + Clone + Fn(()) -> WQFut,
-    WQFut: Send + Future<Output = Result<crate::withdraw::server::Query, StatusCode>>,
+    WQFut: Send + Future<Output = Result<crate::withdraw::server::Response, StatusCode>>,
 
-    WC: 'static + Send + Clone + Fn(crate::withdraw::server::CallbackRequest) -> WCFut,
+    WC: 'static + Send + Clone + Fn(crate::withdraw::server::CallbackQuery) -> WCFut,
     WCFut: Send + Future<Output = Result<crate::withdraw::server::CallbackResponse, StatusCode>>,
 {
     #[allow(clippy::too_many_lines)]
@@ -135,8 +135,8 @@ where
                     let cc = self.channel_callback.clone();
                     async move {
                         let q = q.ok_or(StatusCode::BAD_REQUEST)?;
-                        let req = q.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
-                        cc(req).await.map(|a| a.to_string())
+                        let p = q.as_str().try_into().map_err(|_| StatusCode::BAD_REQUEST)?;
+                        cc(p).await.map(|a| a.to_string())
                     }
                 }),
             )
@@ -163,8 +163,8 @@ where
                     let pc = self.pay_callback.clone();
                     async move {
                         let q = q.ok_or(StatusCode::BAD_REQUEST)?;
-                        let req = q.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
-                        pc(req).await.map(|a| a.to_string())
+                        let p = q.as_str().try_into().map_err(|_| StatusCode::BAD_REQUEST)?;
+                        pc(p).await.map(|a| a.to_string())
                     }
                 }),
             )
@@ -181,8 +181,8 @@ where
                     let wc = self.withdraw_callback.clone();
                     async move {
                         let q = q.ok_or(StatusCode::BAD_REQUEST)?;
-                        let req = q.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
-                        wc(req).await.map(|a| a.to_string())
+                        let p = q.as_str().try_into().map_err(|_| StatusCode::BAD_REQUEST)?;
+                        wc(p).await.map(|a| a.to_string())
                     }
                 }),
             )
