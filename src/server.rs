@@ -126,7 +126,11 @@ where
                 "/lnurlc",
                 get(move || {
                     let cq = self.channel_query.clone();
-                    async move { cq(()).await.map(|a| a.to_string()) }
+                    async move {
+                        cq(()).await.and_then(|a| {
+                            Vec::<u8>::try_from(a).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+                        })
+                    }
                 }),
             )
             .route(
@@ -146,7 +150,12 @@ where
                     let pq = self.pay_query.clone();
                     move |Path(identifier): Path<String>| {
                         let pq = pq.clone();
-                        async move { pq(Some(identifier)).await.map(|a| a.to_string()) }
+                        async move {
+                            pq(Some(identifier)).await.and_then(|a| {
+                                Vec::<u8>::try_from(a)
+                                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+                            })
+                        }
                     }
                 }),
             )
@@ -154,7 +163,11 @@ where
                 "/lnurlp",
                 get(move || {
                     let pq = self.pay_query.clone();
-                    async move { pq(None).await.map(|a| a.to_string()) }
+                    async move {
+                        pq(None).await.and_then(|a| {
+                            Vec::<u8>::try_from(a).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+                        })
+                    }
                 }),
             )
             .route(
@@ -172,7 +185,11 @@ where
                 "/lnurlw",
                 get(move || {
                     let wq = self.withdraw_query.clone();
-                    async move { wq(()).await.map(|a| a.to_string()) }
+                    async move {
+                        wq(()).await.and_then(|a| {
+                            Vec::<u8>::try_from(a).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+                        })
+                    }
                 }),
             )
             .route(

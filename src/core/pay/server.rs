@@ -12,43 +12,44 @@ pub struct Response {
     pub max: u64,
 }
 
-impl std::fmt::Display for Response {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl TryFrom<Response> for Vec<u8> {
+    type Error = &'static str;
+
+    fn try_from(r: Response) -> Result<Self, Self::Error> {
         use base64::{prelude::BASE64_STANDARD, Engine};
 
         let metadata = serde_json::to_string(
             &[
-                Some(("text/plain", self.short_description.clone())),
-                self.long_description
+                Some(("text/plain", r.short_description.clone())),
+                r.long_description
                     .as_ref()
                     .map(|s| ("text/long-desc", s.clone())),
-                self.jpeg
+                r.jpeg
                     .as_ref()
                     .map(|s| ("image/jpeg;base64", BASE64_STANDARD.encode(s))),
-                self.png
+                r.png
                     .as_ref()
                     .map(|s| ("image/png;base64", BASE64_STANDARD.encode(s))),
-                self.identifier
+                r.identifier
                     .as_ref()
                     .map(|s| ("text/identifier", s.clone())),
-                self.email.as_ref().map(|s| ("text/email", s.clone())),
+                r.email.as_ref().map(|s| ("text/email", s.clone())),
             ]
             .into_iter()
             .flatten()
             .collect::<Vec<_>>(),
         )
-        .map_err(|_| std::fmt::Error)?;
+        .map_err(|_| "serialize failed")?;
 
-        let ser = serde_json::to_string(&ser::Response {
+        serde_json::to_vec(&ser::Response {
             tag: super::TAG,
             metadata,
-            callback: &self.callback,
-            min_sendable: self.min,
-            max_sendable: self.max,
-            comment_allowed: self.comment_size.unwrap_or(0),
-        });
-
-        f.write_str(&ser.map_err(|_| std::fmt::Error)?)
+            callback: &r.callback,
+            min_sendable: r.min,
+            max_sendable: r.max,
+            comment_allowed: r.comment_size.unwrap_or(0),
+        })
+        .map_err(|_| "serialize failed")
     }
 }
 
@@ -158,8 +159,8 @@ mod tests {
         };
 
         assert_eq!(
-            query.to_string(),
-            r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
+            Vec::<u8>::try_from(query).unwrap(),
+            br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
         );
     }
 
@@ -179,8 +180,8 @@ mod tests {
         };
 
         assert_eq!(
-            query.to_string(),
-            r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":140}"#
+            Vec::<u8>::try_from(query).unwrap(),
+            br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":140}"#
         );
     }
 
@@ -200,8 +201,8 @@ mod tests {
         };
 
         assert_eq!(
-            query.to_string(),
-            r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"text/long-desc\",\"mochila a jato brutal incluida\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
+            Vec::<u8>::try_from(query).unwrap(),
+            br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"text/long-desc\",\"mochila a jato brutal incluida\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
         );
     }
 
@@ -221,8 +222,8 @@ mod tests {
         };
 
         assert_eq!(
-            query.to_string(),
-            r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"image/jpeg;base64\",\"aW1hZ2VtYnJ1dGFs\"],[\"image/png;base64\",\"Zm90b2JydXRhbA==\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
+            Vec::<u8>::try_from(query).unwrap(),
+            br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"image/jpeg;base64\",\"aW1hZ2VtYnJ1dGFs\"],[\"image/png;base64\",\"Zm90b2JydXRhbA==\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
         );
     }
 
@@ -242,8 +243,8 @@ mod tests {
         };
 
         assert_eq!(
-            query.to_string(),
-            r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"image/jpeg;base64\",\"aW1hZ2VtYnJ1dGFs\"],[\"image/png;base64\",\"Zm90b2JydXRhbA==\"],[\"text/identifier\",\"steve@magal.brutal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
+            Vec::<u8>::try_from(query).unwrap(),
+            br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"image/jpeg;base64\",\"aW1hZ2VtYnJ1dGFs\"],[\"image/png;base64\",\"Zm90b2JydXRhbA==\"],[\"text/identifier\",\"steve@magal.brutal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
         );
     }
 
@@ -263,8 +264,8 @@ mod tests {
         };
 
         assert_eq!(
-            query.to_string(),
-            r#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"image/jpeg;base64\",\"aW1hZ2VtYnJ1dGFs\"],[\"image/png;base64\",\"Zm90b2JydXRhbA==\"],[\"text/email\",\"steve@magal.brutal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
+            Vec::<u8>::try_from(query).unwrap(),
+            br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"image/jpeg;base64\",\"aW1hZ2VtYnJ1dGFs\"],[\"image/png;base64\",\"Zm90b2JydXRhbA==\"],[\"text/email\",\"steve@magal.brutal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
         );
     }
 

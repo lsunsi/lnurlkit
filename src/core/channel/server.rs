@@ -5,16 +5,17 @@ pub struct Response {
     pub k1: String,
 }
 
-impl std::fmt::Display for Response {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let ser = serde_json::to_string(&ser::Response {
-            tag: super::TAG,
-            callback: &self.callback,
-            uri: &self.uri,
-            k1: &self.k1,
-        });
+impl TryFrom<Response> for Vec<u8> {
+    type Error = &'static str;
 
-        f.write_str(&ser.map_err(|_| std::fmt::Error)?)
+    fn try_from(r: Response) -> Result<Self, Self::Error> {
+        serde_json::to_vec(&ser::Response {
+            tag: super::TAG,
+            callback: &r.callback,
+            uri: &r.uri,
+            k1: &r.k1,
+        })
+        .map_err(|_| "serialize failed")
     }
 }
 
@@ -109,8 +110,8 @@ mod tests {
             k1: String::from("caum"),
         };
 
-        let json = r#"{"tag":"channelRequest","callback":"https://yuri/?o=callback","uri":"noh@ipe:porta","k1":"caum"}"#;
-        assert_eq!(query.to_string(), json);
+        let json = br#"{"tag":"channelRequest","callback":"https://yuri/?o=callback","uri":"noh@ipe:porta","k1":"caum"}"#;
+        assert_eq!(Vec::<u8>::try_from(query).unwrap(), json);
     }
 
     #[test]

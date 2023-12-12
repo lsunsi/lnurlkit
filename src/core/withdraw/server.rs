@@ -7,17 +7,19 @@ pub struct Response {
     pub max: u64,
 }
 
-impl std::fmt::Display for Response {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let ser = serde_json::to_string(&ser::Response {
+impl TryFrom<Response> for Vec<u8> {
+    type Error = &'static str;
+
+    fn try_from(r: Response) -> Result<Self, Self::Error> {
+        serde_json::to_vec(&ser::Response {
             tag: super::TAG,
-            callback: &self.callback,
-            default_description: &self.description,
-            min_withdrawable: self.min,
-            max_withdrawable: self.max,
-            k1: &self.k1,
-        });
-        f.write_str(&ser.map_err(|_| std::fmt::Error)?)
+            callback: &r.callback,
+            default_description: &r.description,
+            min_withdrawable: r.min,
+            max_withdrawable: r.max,
+            k1: &r.k1,
+        })
+        .map_err(|_| "serialize failed")
     }
 }
 
@@ -95,8 +97,8 @@ mod tests {
         };
 
         assert_eq!(
-            query.to_string(),
-            r#"{"tag":"withdrawRequest","k1":"caum","callback":"https://yuri/?o=callback","defaultDescription":"verde com bolinhas","minWithdrawable":314,"maxWithdrawable":315}"#
+            Vec::<u8>::try_from(query).unwrap(),
+            br#"{"tag":"withdrawRequest","k1":"caum","callback":"https://yuri/?o=callback","defaultDescription":"verde com bolinhas","minWithdrawable":314,"maxWithdrawable":315}"#
         );
     }
 
