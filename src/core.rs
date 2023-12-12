@@ -2,11 +2,16 @@ pub mod channel;
 pub mod pay;
 pub mod withdraw;
 
+pub enum Resolved {
+    Url(url::Url),
+    Withdraw(url::Url, withdraw::client::Response),
+}
+
 /// # Errors
 ///
 /// Returns error in case `s` cannot be understood.
-pub fn resolve(s: &str) -> Result<url::Url, &'static str> {
-    if s.starts_with("lnurl1") || s.starts_with("LNURL1") {
+pub fn resolve(s: &str) -> Result<Resolved, &'static str> {
+    let url = if s.starts_with("lnurl1") || s.starts_with("LNURL1") {
         resolve_bech32(s)
     } else if s.starts_with("lnurl") || s.starts_with("keyauth") {
         resolve_scheme(s)
@@ -14,7 +19,19 @@ pub fn resolve(s: &str) -> Result<url::Url, &'static str> {
         resolve_address(s)
     } else {
         Err("unknown")
-    }
+    }?;
+
+    let tag = url
+        .query_pairs()
+        .find_map(|(k, v)| (k == "tag").then_some(v));
+
+    Ok(match tag.as_deref() {
+        Some(withdraw::TAG) => match url.as_str().parse::<withdraw::client::Response>() {
+            Ok(w) => Resolved::Withdraw(url, w),
+            Err(_) => Resolved::Url(url),
+        },
+        _ => Resolved::Url(url),
+    })
 }
 
 fn resolve_bech32(s: &str) -> Result<url::Url, &'static str> {
@@ -106,50 +123,85 @@ mod tests {
     #[test]
     fn resolve_bech32() {
         let input = "lnurl1dp68gurn8ghj7argv4ex2tnfwvhkumelwv7hqmm0dc6p3ztw";
-        assert_eq!(
-            super::resolve(input).unwrap().to_string(),
-            "https://there.is/no?s=poon"
-        );
+        let super::Resolved::Url(url) = super::resolve(input).unwrap() else {
+            panic!("expected resolved url");
+        };
+
+        assert_eq!(url.as_str(), "https://there.is/no?s=poon");
 
         let input = "LNURL1DP68GURN8GHJ7ARGV4EX2TNFWVHKUMELWV7HQMM0DC6P3ZTW";
-        assert_eq!(
-            super::resolve(input).unwrap().to_string(),
-            "https://there.is/no?s=poon"
-        );
+        let super::Resolved::Url(url) = super::resolve(input).unwrap() else {
+            panic!("expected resolved url");
+        };
+
+        assert_eq!(url.as_str(), "https://there.is/no?s=poon");
     }
 
     #[test]
     fn resolve_address() {
-        assert_eq!(
-            super::resolve("no-spoon@there.is").unwrap().to_string(),
-            "https://there.is/.well-known/lnurlp/no-spoon"
-        );
+        let super::Resolved::Url(url) = super::resolve("no-spoon@there.is").unwrap() else {
+            panic!("expected resolved url");
+        };
+
+        assert_eq!(url.as_str(), "https://there.is/.well-known/lnurlp/no-spoon");
     }
 
     #[test]
     fn resolve_schemes() {
         let input = "lnurlc://there.is/no?s=poon";
-        assert_eq!(
-            super::resolve(input).unwrap().to_string(),
-            "https://there.is/no?s=poon"
-        );
+        let super::Resolved::Url(url) = super::resolve(input).unwrap() else {
+            panic!("expected resolved url");
+        };
+
+        assert_eq!(url.as_str(), "https://there.is/no?s=poon");
 
         let input = "lnurlw://there.is/no?s=poon";
-        assert_eq!(
-            super::resolve(input).unwrap().to_string(),
-            "https://there.is/no?s=poon"
-        );
+        let super::Resolved::Url(url) = super::resolve(input).unwrap() else {
+            panic!("expected resolved url");
+        };
+
+        assert_eq!(url.as_str(), "https://there.is/no?s=poon");
 
         let input = "lnurlp://there.is/no?s=poon";
-        assert_eq!(
-            super::resolve(input).unwrap().to_string(),
-            "https://there.is/no?s=poon"
-        );
+        let super::Resolved::Url(url) = super::resolve(input).unwrap() else {
+            panic!("expected resolved url");
+        };
+
+        assert_eq!(url.as_str(), "https://there.is/no?s=poon");
 
         let input = "keyauth://there.is/no?s=poon";
+        let super::Resolved::Url(url) = super::resolve(input).unwrap() else {
+            panic!("expected resolved url");
+        };
+
+        assert_eq!(url.as_str(), "https://there.is/no?s=poon");
+    }
+
+    #[test]
+    fn resolve_fast_withdraw() {
+        let input = "lnurlw://there.is/no\
+            ?s=poon\
+            &tag=withdrawRequest\
+            &k1=caum\
+            &minWithdrawable=314\
+            &maxWithdrawable=315\
+            &defaultDescription=descrical\
+            &callback=https://call.back";
+
+        let super::Resolved::Withdraw(url, _) = super::resolve(input).unwrap() else {
+            panic!("expected resolved url");
+        };
+
         assert_eq!(
-            super::resolve(input).unwrap().to_string(),
-            "https://there.is/no?s=poon"
+            url.as_str(),
+            "https://there.is/no\
+            ?s=poon\
+            &tag=withdrawRequest\
+            &k1=caum\
+            &minWithdrawable=314\
+            &maxWithdrawable=315\
+            &defaultDescription=descrical\
+            &callback=https://call.back"
         );
     }
 }

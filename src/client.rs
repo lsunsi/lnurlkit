@@ -6,9 +6,15 @@ impl Client {
     ///
     /// Returns errors on network or deserialization failures.
     pub async fn query(&self, s: &str) -> Result<Response, &'static str> {
-        let url = crate::resolve(s)?;
-
         let client = &self.0;
+
+        let url = match crate::resolve(s)? {
+            crate::Resolved::Url(url) => url,
+            crate::Resolved::Withdraw(_, core) => {
+                return Ok(Response::Withdraw(Withdraw { client, core }))
+            }
+        };
+
         let response = client.get(url).send().await.map_err(|_| "request failed")?;
         let bytes = response.bytes().await.map_err(|_| "body failed")?;
 

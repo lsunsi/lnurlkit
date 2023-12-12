@@ -44,7 +44,9 @@ async fn test() {
     let client = lnurlkit::Client::default();
 
     let lnaddr = format!("nico@{addr}");
-    let mut lnurl = lnurlkit::resolve(&lnaddr).expect("resolve");
+    let lnurlkit::Resolved::Url(mut lnurl) = lnurlkit::resolve(&lnaddr).expect("resolve") else {
+        panic!("wrong resolved");
+    };
     lnurl.set_scheme("http").expect("scheme");
 
     let bech32 = bech32::encode(
@@ -62,7 +64,10 @@ async fn test() {
     assert_eq!(&pr.core.identifier.unwrap() as &str, "nico");
 
     let lnaddr = format!("jorel@{addr}");
-    let mut lnurl = lnurlkit::resolve(&lnaddr).expect("resolve");
+    let lnurlkit::Resolved::Url(mut lnurl) = lnurlkit::resolve(&lnaddr).expect("resolve") else {
+        panic!("wrong resolved");
+    };
+
     lnurl.set_scheme("http").expect("scheme");
 
     let bech32 = bech32::encode(

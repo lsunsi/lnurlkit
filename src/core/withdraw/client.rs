@@ -23,6 +23,22 @@ impl TryFrom<&[u8]> for Response {
     }
 }
 
+impl std::str::FromStr for Response {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let d: de::Response = serde_urlencoded::from_str(s).map_err(|_| "deserialize failed")?;
+
+        Ok(Response {
+            k1: d.k1,
+            callback: d.callback,
+            description: d.default_description,
+            min: d.min_withdrawable,
+            max: d.max_withdrawable,
+        })
+    }
+}
+
 impl Response {
     #[must_use]
     pub fn callback<'a>(&'a self, pr: &'a str) -> CallbackQuery {
@@ -98,7 +114,7 @@ mod de {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn response_parse() {
+    fn response_bytes_parse() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "defaultDescription": "verde com bolinhas",
@@ -114,6 +130,26 @@ mod tests {
         assert_eq!(parsed.k1, "caum");
         assert_eq!(parsed.max, 315);
         assert_eq!(parsed.min, 314);
+    }
+
+    #[test]
+    fn response_string_parse() {
+        let input = "lnurlw://there.is/no\
+            ?s=poon\
+            &tag=withdrawRequest\
+            &k1=caum\
+            &minWithdrawable=314\
+            &maxWithdrawable=315\
+            &defaultDescription=descricao\
+            &callback=https://call.back";
+
+        let parsed: super::Response = input.parse().expect("parse");
+
+        assert_eq!(parsed.callback.to_string(), "https://call.back/");
+        assert_eq!(parsed.description, "descricao");
+        assert_eq!(parsed.k1, "caum");
+        assert_eq!(parsed.min, 314);
+        assert_eq!(parsed.max, 315);
     }
 
     #[test]

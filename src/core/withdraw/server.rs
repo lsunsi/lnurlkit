@@ -23,6 +23,21 @@ impl TryFrom<Response> for Vec<u8> {
     }
 }
 
+impl std::fmt::Display for Response {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = serde_urlencoded::to_string(ser::Response {
+            tag: super::TAG,
+            callback: &self.callback,
+            default_description: &self.description,
+            min_withdrawable: self.min,
+            max_withdrawable: self.max,
+            k1: &self.k1,
+        })
+        .map_err(|_| std::fmt::Error)?;
+        f.write_str(&s)
+    }
+}
+
 pub struct CallbackQuery {
     pub k1: String,
     pub pr: String,
