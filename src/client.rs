@@ -10,11 +10,12 @@ impl Client {
 
         let client = &self.0;
         let response = client.get(url).send().await.map_err(|_| "request failed")?;
-        let text = response.text().await.map_err(|_| "body failed")?;
+        let bytes = response.bytes().await.map_err(|_| "body failed")?;
 
-        text.parse::<crate::Response>()
+        (&bytes as &[u8])
+            .try_into()
             .map_err(|_| "parse failed")
-            .map(|query| match query {
+            .map(|query: crate::Response| match query {
                 crate::Response::Channel(core) => Response::Channel(Channel { client, core }),
                 crate::Response::Pay(core) => Response::Pay(Pay { client, core }),
                 crate::Response::Withdraw(core) => Response::Withdraw(Withdraw { client, core }),

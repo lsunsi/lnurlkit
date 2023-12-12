@@ -7,11 +7,11 @@ pub struct Response {
     pub max: u64,
 }
 
-impl std::str::FromStr for Response {
-    type Err = &'static str;
+impl TryFrom<&[u8]> for Response {
+    type Error = &'static str;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let d: de::Response = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
+    fn try_from(s: &[u8]) -> Result<Self, Self::Error> {
+        let d: de::Response = serde_json::from_slice(s).map_err(|_| "deserialize failed")?;
 
         Ok(Response {
             k1: d.k1,
@@ -107,7 +107,7 @@ mod tests {
             "k1": "caum"
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.description, "verde com bolinhas");
@@ -126,7 +126,7 @@ mod tests {
             "k1": "caum"
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(
             parsed.callback("pierre").to_string(),

@@ -2,7 +2,7 @@ mod pay_request {
     #[test]
     fn alby() {
         let Ok(lnurlkit::Response::Pay(pr)) =
-            include_str!("../fixtures/alby-pay.json").parse::<lnurlkit::Response>()
+            (include_bytes!("../fixtures/alby-pay.json") as &[u8]).try_into()
         else {
             panic!("parse");
         };
@@ -25,7 +25,7 @@ mod pay_request {
     #[test]
     fn blink() {
         let Ok(lnurlkit::Response::Pay(pr)) =
-            include_str!("../fixtures/blink-pay.json").parse::<lnurlkit::Response>()
+            (include_bytes!("../fixtures/blink-pay.json") as &[u8]).try_into()
         else {
             panic!("parse");
         };
@@ -48,7 +48,7 @@ mod pay_request {
     #[test]
     fn bipa() {
         let Ok(lnurlkit::Response::Pay(pr)) =
-            include_str!("../fixtures/bipa-pay.json").parse::<lnurlkit::Response>()
+            (include_bytes!("../fixtures/bipa-pay.json") as &[u8]).try_into()
         else {
             panic!("parse");
         };
@@ -71,7 +71,7 @@ mod pay_request {
     #[test]
     fn pouch() {
         let Ok(lnurlkit::Response::Pay(pr)) =
-            include_str!("../fixtures/pouch-pay.json").parse::<lnurlkit::Response>()
+            (include_bytes!("../fixtures/pouch-pay.json") as &[u8]).try_into()
         else {
             panic!("parse");
         };
@@ -94,7 +94,7 @@ mod pay_request {
     #[test]
     fn walletofsatoshi() {
         let Ok(lnurlkit::Response::Pay(pr)) =
-            include_str!("../fixtures/walletofsatoshi-pay.json").parse::<lnurlkit::Response>()
+            (include_bytes!("../fixtures/walletofsatoshi-pay.json") as &[u8]).try_into()
         else {
             panic!("parse");
         };
@@ -120,7 +120,7 @@ mod pay_request {
     #[test]
     fn zebedee() {
         let Ok(lnurlkit::Response::Pay(pr)) =
-            include_str!("../fixtures/zebedee-pay.json").parse::<lnurlkit::Response>()
+            (include_bytes!("../fixtures/zebedee-pay.json") as &[u8]).try_into()
         else {
             panic!("parse");
         };

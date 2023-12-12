@@ -13,14 +13,14 @@ pub struct Response {
     pub max: u64,
 }
 
-impl std::str::FromStr for Response {
-    type Err = &'static str;
+impl TryFrom<&[u8]> for Response {
+    type Error = &'static str;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn try_from(s: &[u8]) -> Result<Self, Self::Error> {
         use base64::{prelude::BASE64_STANDARD, Engine};
         use serde_json::Value;
 
-        let p: de::Response = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
+        let p: de::Response = serde_json::from_slice(s).map_err(|_| "deserialize failed")?;
 
         let metadata = serde_json::from_str::<Vec<(String, Value)>>(&p.metadata)
             .map_err(|_| "deserialize metadata failed")?;
@@ -200,7 +200,7 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.short_description, "boneco do steve magal");
@@ -229,7 +229,7 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
         assert_eq!(parsed.comment_size.unwrap(), 140);
     }
 
@@ -242,7 +242,7 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
         assert_eq!(
             parsed.long_description.unwrap(),
             "mochila a jato brutal incluida"
@@ -258,7 +258,7 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
         assert_eq!(parsed.jpeg.unwrap(), b"imagembrutal");
         assert_eq!(parsed.png.unwrap(), b"fotobrutal");
     }
@@ -272,7 +272,7 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
         assert_eq!(parsed.identifier.unwrap(), "steve@magal.brutal");
     }
 
@@ -285,7 +285,7 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
         assert_eq!(parsed.email.unwrap(), "steve@magal.brutal");
     }
 
@@ -298,7 +298,7 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(
             parsed.callback(314, None).to_string(),
@@ -315,7 +315,7 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(
             parsed.callback(314, Some("comentario")).to_string(),

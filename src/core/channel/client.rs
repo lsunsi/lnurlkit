@@ -5,11 +5,11 @@ pub struct Response {
     pub k1: String,
 }
 
-impl std::str::FromStr for Response {
-    type Err = &'static str;
+impl TryFrom<&[u8]> for Response {
+    type Error = &'static str;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let d: de::Response = serde_json::from_str(s).map_err(|_| "deserialize failed")?;
+    fn try_from(s: &[u8]) -> Result<Self, Self::Error> {
+        let d: de::Response = serde_json::from_slice(s).map_err(|_| "deserialize failed")?;
 
         Ok(Response {
             callback: d.callback,
@@ -137,7 +137,7 @@ mod tests {
             "k1": "caum"
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(parsed.callback.as_str(), "https://yuri/?o=callback");
         assert_eq!(parsed.uri, "noh@ipe:porta");
@@ -152,7 +152,7 @@ mod tests {
             "k1": "caum"
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
         let url = parsed.callback_accept("idremoto", true);
 
         assert_eq!(
@@ -176,7 +176,7 @@ mod tests {
             "k1": "caum"
         }"#;
 
-        let parsed = input.parse::<super::Response>().expect("parse");
+        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
         let url = parsed.callback_cancel("idremoto");
 
         assert_eq!(

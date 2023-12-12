@@ -75,25 +75,25 @@ pub enum Response {
     Withdraw(withdraw::client::Response),
 }
 
-impl std::str::FromStr for Response {
-    type Err = &'static str;
+impl TryFrom<&[u8]> for Response {
+    type Error = &'static str;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn try_from(s: &[u8]) -> Result<Self, Self::Error> {
         #[derive(serde::Deserialize)]
         struct Tag {
             tag: String,
         }
 
-        let tag = serde_json::from_str::<Tag>(s).map_err(|_| "deserialize tag failed")?;
+        let tag = serde_json::from_slice::<Tag>(s).map_err(|_| "deserialize tag failed")?;
 
         if tag.tag == channel::TAG {
-            let cr = s.parse().map_err(|_| "deserialize data failed")?;
+            let cr = s.try_into().map_err(|_| "deserialize data failed")?;
             Ok(Response::Channel(cr))
         } else if tag.tag == pay::TAG {
-            let pr = s.parse().map_err(|_| "deserialize data failed")?;
+            let pr = s.try_into().map_err(|_| "deserialize data failed")?;
             Ok(Response::Pay(pr))
         } else if tag.tag == withdraw::TAG {
-            let wr = s.parse().map_err(|_| "deserialize data failed")?;
+            let wr = s.try_into().map_err(|_| "deserialize data failed")?;
             Ok(Response::Withdraw(wr))
         } else {
             Err("unknown tag")
