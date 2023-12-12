@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.9](https://github.com/lsunsi/lnurlkit/compare/v0.1.8...v0.1.9) - 2023-12-12
+
+### Added
+- attempt support at fast withdraw
+
+### Other
+- responses implement to slice not str
+- responses implement from slice not str
+
 ## [0.1.8](https://github.com/lsunsi/lnurlkit/compare/v0.1.7...v0.1.8) - 2023-12-11
 
 ### Fixed
