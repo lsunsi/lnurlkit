@@ -14,7 +14,7 @@ async fn test() {
             move |_| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::pay::server::Response {
+                    Ok(lnurlkit::pay::server::Entrypoint {
                         callback,
                         short_description: String::new(),
                         long_description: None,
@@ -28,7 +28,7 @@ async fn test() {
                     })
                 }
             },
-            |req: lnurlkit::pay::server::CallbackQuery| async move {
+            |req: lnurlkit::pay::server::Callback| async move {
                 Ok(lnurlkit::pay::server::CallbackResponse {
                     pr: format!("pierre:{:?}", req.comment),
                     disposable: false,
@@ -51,21 +51,18 @@ async fn test() {
     )
     .expect("lnurl");
 
-    let queried = client.query(&lnurl).await.expect("query");
-    let lnurlkit::client::Response::Pay(pr) = queried else {
+    let queried = client.entrypoint(&lnurl).await.expect("query");
+    let lnurlkit::client::Entrypoint::Pay(pr) = queried else {
         panic!("not pay request");
     };
 
     assert_eq!(pr.core.comment_size.unwrap(), 140);
 
-    let invoice = pr.callback(314, None).await.expect("callback");
+    let invoice = pr.invoice(314, None).await.expect("callback");
 
     assert_eq!(&invoice.pr as &str, "pierre:None");
 
-    let invoice = pr
-        .callback(314, Some("comentario"))
-        .await
-        .expect("callback");
+    let invoice = pr.invoice(314, Some("comentario")).await.expect("callback");
 
     assert_eq!(&invoice.pr as &str, "pierre:Some(\"comentario\")");
 }

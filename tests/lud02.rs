@@ -14,16 +14,16 @@ async fn test() {
             move |()| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::channel::server::Response {
+                    Ok(lnurlkit::channel::server::Entrypoint {
                         uri: String::from("u@r:i"),
                         k1: String::from("caum"),
                         callback,
                     })
                 }
             },
-            |req: lnurlkit::channel::server::CallbackQuery| async move {
+            |req: lnurlkit::channel::server::Callback| async move {
                 Ok(match req {
-                    lnurlkit::channel::server::CallbackQuery::Cancel { remoteid, k1 } => {
+                    lnurlkit::channel::server::Callback::Cancel { remoteid, k1 } => {
                         if &remoteid as &str == "idremoto" {
                             lnurlkit::channel::server::CallbackResponse::Ok
                         } else {
@@ -31,7 +31,7 @@ async fn test() {
                             lnurlkit::channel::server::CallbackResponse::Error { reason }
                         }
                     }
-                    lnurlkit::channel::server::CallbackQuery::Accept {
+                    lnurlkit::channel::server::Callback::Accept {
                         remoteid,
                         private,
                         k1,
@@ -57,41 +57,35 @@ async fn test() {
     )
     .expect("lnurl");
 
-    let queried = client.query(&lnurl).await.expect("query");
-    let lnurlkit::client::Response::Channel(cr) = queried else {
+    let queried = client.entrypoint(&lnurl).await.expect("query");
+    let lnurlkit::client::Entrypoint::Channel(cr) = queried else {
         panic!("not pay request");
     };
 
     assert_eq!(&cr.core.uri as &str, "u@r:i");
 
-    let response = cr.callback_cancel("idremoto").await.expect("callback");
+    let response = cr.cancel("idremoto").await.expect("callback");
 
     assert!(matches!(
         response,
         lnurlkit::channel::client::CallbackResponse::Ok
     ));
 
-    let response = cr.callback_cancel("iderrado").await.expect("callback");
+    let response = cr.cancel("iderrado").await.expect("callback");
 
     assert!(matches!(
         response,
         lnurlkit::channel::client::CallbackResponse::Error { reason } if &reason as &str == "Cancel/caum/iderrado"
     ));
 
-    let response = cr
-        .callback_accept("iderrado", true)
-        .await
-        .expect("callback");
+    let response = cr.accept("iderrado", true).await.expect("callback");
 
     assert!(matches!(
         response,
         lnurlkit::channel::client::CallbackResponse::Error { reason } if &reason as &str == "Accept/caum/iderrado/true"
     ));
 
-    let response = cr
-        .callback_accept("iderrado", false)
-        .await
-        .expect("callback");
+    let response = cr.accept("iderrado", false).await.expect("callback");
 
     assert!(matches!(
         response,

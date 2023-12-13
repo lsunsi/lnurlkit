@@ -1,5 +1,5 @@
 #[derive(Clone, Debug)]
-pub struct Response {
+pub struct Entrypoint {
     pub callback: url::Url,
     pub metadata_raw: String,
     pub short_description: String,
@@ -13,14 +13,14 @@ pub struct Response {
     pub max: u64,
 }
 
-impl TryFrom<&[u8]> for Response {
+impl TryFrom<&[u8]> for Entrypoint {
     type Error = &'static str;
 
     fn try_from(s: &[u8]) -> Result<Self, Self::Error> {
         use base64::{prelude::BASE64_STANDARD, Engine};
         use serde_json::Value;
 
-        let p: de::Response = serde_json::from_slice(s).map_err(|_| "deserialize failed")?;
+        let p: de::Entrypoint = serde_json::from_slice(s).map_err(|_| "deserialize failed")?;
 
         let metadata = serde_json::from_str::<Vec<(String, Value)>>(&p.metadata)
             .map_err(|_| "deserialize metadata failed")?;
@@ -74,7 +74,7 @@ impl TryFrom<&[u8]> for Response {
                 _ => None,
             });
 
-        Ok(Response {
+        Ok(Entrypoint {
             metadata_raw: p.metadata,
             callback: p.callback,
             comment_size: p.comment_allowed,
@@ -90,14 +90,10 @@ impl TryFrom<&[u8]> for Response {
     }
 }
 
-impl Response {
+impl Entrypoint {
     #[must_use]
-    pub fn callback<'a>(
-        &'a self,
-        millisatoshis: u64,
-        comment: Option<&'a str>,
-    ) -> CallbackQuery<'a> {
-        CallbackQuery {
+    pub fn invoice<'a>(&'a self, millisatoshis: u64, comment: Option<&'a str>) -> Callback<'a> {
+        Callback {
             url: &self.callback,
             millisatoshis,
             comment,
@@ -105,13 +101,13 @@ impl Response {
     }
 }
 
-pub struct CallbackQuery<'a> {
+pub struct Callback<'a> {
     pub url: &'a url::Url,
     pub comment: Option<&'a str>,
     pub millisatoshis: u64,
 }
 
-impl std::fmt::Display for CallbackQuery<'_> {
+impl std::fmt::Display for Callback<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let query = super::serde::CallbackQuery {
             comment: self.comment,
@@ -169,7 +165,7 @@ mod de {
     use url::Url;
 
     #[derive(Deserialize)]
-    pub(super) struct Response {
+    pub(super) struct Entrypoint {
         pub metadata: String,
         pub callback: Url,
         #[serde(rename = "minSendable")]
@@ -192,7 +188,7 @@ mod de {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn response_parse_base() {
+    fn entrypoint_parse_base() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/crazy\", \"👋🇧🇴💾\"]]",
@@ -200,7 +196,7 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.short_description, "boneco do steve magal");
@@ -220,7 +216,7 @@ mod tests {
     }
 
     #[test]
-    fn response_parse_comment_size() {
+    fn entrypoint_parse_comment_size() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
@@ -229,12 +225,12 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
         assert_eq!(parsed.comment_size.unwrap(), 140);
     }
 
     #[test]
-    fn response_parse_long_description() {
+    fn entrypoint_parse_long_description() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/long-desc\", \"mochila a jato brutal incluida\"]]",
@@ -242,7 +238,7 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
         assert_eq!(
             parsed.long_description.unwrap(),
             "mochila a jato brutal incluida"
@@ -250,7 +246,7 @@ mod tests {
     }
 
     #[test]
-    fn response_parse_images() {
+    fn entrypoint_parse_images() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"image/png;base64\", \"Zm90b2JydXRhbA==\"],[\"image/jpeg;base64\", \"aW1hZ2VtYnJ1dGFs\"]]",
@@ -258,13 +254,13 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
         assert_eq!(parsed.jpeg.unwrap(), b"imagembrutal");
         assert_eq!(parsed.png.unwrap(), b"fotobrutal");
     }
 
     #[test]
-    fn response_parse_identifier() {
+    fn entrypoint_parse_identifier() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/identifier\", \"steve@magal.brutal\"]]",
@@ -272,12 +268,12 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
         assert_eq!(parsed.identifier.unwrap(), "steve@magal.brutal");
     }
 
     #[test]
-    fn response_parse_email() {
+    fn entrypoint_parse_email() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/email\", \"steve@magal.brutal\"]]",
@@ -285,12 +281,12 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
         assert_eq!(parsed.email.unwrap(), "steve@magal.brutal");
     }
 
     #[test]
-    fn callback_query_render_base() {
+    fn callback_render_base() {
         let input = r#"{
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
             "callback": "https://yuri?o=callback",
@@ -298,16 +294,16 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(
-            parsed.callback(314, None).to_string(),
+            parsed.invoice(314, None).to_string(),
             "https://yuri/?o=callback&amount=314"
         );
     }
 
     #[test]
-    fn callback_query_render_comment() {
+    fn callback_render_comment() {
         let input = r#"{
             "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
             "callback": "https://yuri?o=callback",
@@ -315,10 +311,10 @@ mod tests {
             "minSendable": 314
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(
-            parsed.callback(314, Some("comentario")).to_string(),
+            parsed.invoice(314, Some("comentario")).to_string(),
             "https://yuri/?o=callback&comment=comentario&amount=314"
         );
     }

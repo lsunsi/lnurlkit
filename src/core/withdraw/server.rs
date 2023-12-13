@@ -1,5 +1,5 @@
 #[derive(Clone, Debug)]
-pub struct Response {
+pub struct Entrypoint {
     pub k1: String,
     pub callback: url::Url,
     pub description: String,
@@ -7,11 +7,11 @@ pub struct Response {
     pub max: u64,
 }
 
-impl TryFrom<Response> for Vec<u8> {
+impl TryFrom<Entrypoint> for Vec<u8> {
     type Error = &'static str;
 
-    fn try_from(r: Response) -> Result<Self, Self::Error> {
-        serde_json::to_vec(&ser::Response {
+    fn try_from(r: Entrypoint) -> Result<Self, Self::Error> {
+        serde_json::to_vec(&ser::Entrypoint {
             tag: super::TAG,
             callback: &r.callback,
             default_description: &r.description,
@@ -23,9 +23,9 @@ impl TryFrom<Response> for Vec<u8> {
     }
 }
 
-impl std::fmt::Display for Response {
+impl std::fmt::Display for Entrypoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = serde_urlencoded::to_string(ser::Response {
+        let s = serde_urlencoded::to_string(ser::Entrypoint {
             tag: super::TAG,
             callback: &self.callback,
             default_description: &self.description,
@@ -38,18 +38,18 @@ impl std::fmt::Display for Response {
     }
 }
 
-pub struct CallbackQuery {
+pub struct Callback {
     pub k1: String,
     pub pr: String,
 }
 
-impl<'a> TryFrom<&'a str> for CallbackQuery {
+impl<'a> TryFrom<&'a str> for Callback {
     type Error = &'static str;
 
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
         serde_urlencoded::from_str::<super::serde::CallbackQuery>(s)
             .map_err(|_| "deserialize failed")
-            .map(|query| CallbackQuery {
+            .map(|query| Callback {
                 k1: String::from(query.k1),
                 pr: String::from(query.pr),
             })
@@ -86,7 +86,7 @@ mod ser {
     use url::Url;
 
     #[derive(Serialize)]
-    pub(super) struct Response<'a> {
+    pub(super) struct Entrypoint<'a> {
         pub tag: &'static str,
         pub k1: &'a str,
         pub callback: &'a Url,
@@ -102,8 +102,8 @@ mod ser {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn response_render() {
-        let query = super::Response {
+    fn entrypoint_render() {
+        let query = super::Entrypoint {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             description: String::from("verde com bolinhas"),
             k1: String::from("caum"),
@@ -118,9 +118,9 @@ mod tests {
     }
 
     #[test]
-    fn callback_query_parse() {
+    fn callback_parse() {
         let input = "k1=caum&pr=pierre";
-        let parsed: super::CallbackQuery = input.try_into().expect("parse");
+        let parsed: super::Callback = input.try_into().expect("parse");
 
         assert_eq!(parsed.pr, "pierre");
         assert_eq!(parsed.k1, "caum");

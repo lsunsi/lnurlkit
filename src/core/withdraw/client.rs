@@ -1,5 +1,5 @@
 #[derive(Clone, Debug)]
-pub struct Response {
+pub struct Entrypoint {
     pub k1: String,
     pub callback: url::Url,
     pub description: String,
@@ -7,13 +7,13 @@ pub struct Response {
     pub max: u64,
 }
 
-impl TryFrom<&[u8]> for Response {
+impl TryFrom<&[u8]> for Entrypoint {
     type Error = &'static str;
 
     fn try_from(s: &[u8]) -> Result<Self, Self::Error> {
-        let d: de::Response = serde_json::from_slice(s).map_err(|_| "deserialize failed")?;
+        let d: de::Entrypoint = serde_json::from_slice(s).map_err(|_| "deserialize failed")?;
 
-        Ok(Response {
+        Ok(Entrypoint {
             k1: d.k1,
             callback: d.callback,
             description: d.default_description,
@@ -23,13 +23,13 @@ impl TryFrom<&[u8]> for Response {
     }
 }
 
-impl std::str::FromStr for Response {
+impl std::str::FromStr for Entrypoint {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let d: de::Response = serde_urlencoded::from_str(s).map_err(|_| "deserialize failed")?;
+        let d: de::Entrypoint = serde_urlencoded::from_str(s).map_err(|_| "deserialize failed")?;
 
-        Ok(Response {
+        Ok(Entrypoint {
             k1: d.k1,
             callback: d.callback,
             description: d.default_description,
@@ -39,10 +39,10 @@ impl std::str::FromStr for Response {
     }
 }
 
-impl Response {
+impl Entrypoint {
     #[must_use]
-    pub fn callback<'a>(&'a self, pr: &'a str) -> CallbackQuery {
-        CallbackQuery {
+    pub fn submit<'a>(&'a self, pr: &'a str) -> Callback {
+        Callback {
             url: &self.callback,
             k1: &self.k1,
             pr,
@@ -51,13 +51,13 @@ impl Response {
 }
 
 #[derive(Clone, Debug)]
-pub struct CallbackQuery<'a> {
+pub struct Callback<'a> {
     pub url: &'a url::Url,
     pub k1: &'a str,
     pub pr: &'a str,
 }
 
-impl std::fmt::Display for CallbackQuery<'_> {
+impl std::fmt::Display for Callback<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let query = super::serde::CallbackQuery {
             k1: self.k1,
@@ -99,7 +99,7 @@ mod de {
     use url::Url;
 
     #[derive(Deserialize)]
-    pub(super) struct Response {
+    pub(super) struct Entrypoint {
         pub k1: String,
         pub callback: Url,
         #[serde(rename = "defaultDescription")]
@@ -114,7 +114,7 @@ mod de {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn response_bytes_parse() {
+    fn entrypoint_bytes_parse() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "defaultDescription": "verde com bolinhas",
@@ -123,7 +123,7 @@ mod tests {
             "k1": "caum"
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://yuri/?o=callback");
         assert_eq!(parsed.description, "verde com bolinhas");
@@ -133,7 +133,7 @@ mod tests {
     }
 
     #[test]
-    fn response_string_parse() {
+    fn entrypoint_string_parse() {
         let input = "lnurlw://there.is/no\
             ?s=poon\
             &tag=withdrawRequest\
@@ -143,7 +143,7 @@ mod tests {
             &defaultDescription=descricao\
             &callback=https://call.back";
 
-        let parsed: super::Response = input.parse().expect("parse");
+        let parsed: super::Entrypoint = input.parse().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://call.back/");
         assert_eq!(parsed.description, "descricao");
@@ -153,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn callback_query_render() {
+    fn callback_render() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "defaultDescription": "verde com bolinhas",
@@ -162,10 +162,10 @@ mod tests {
             "k1": "caum"
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(
-            parsed.callback("pierre").to_string(),
+            parsed.submit("pierre").to_string(),
             "https://yuri/?o=callback&k1=caum&pr=pierre"
         );
     }

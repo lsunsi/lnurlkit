@@ -1,17 +1,17 @@
 #[derive(Clone, Debug)]
-pub struct Response {
+pub struct Entrypoint {
     pub callback: url::Url,
     pub uri: String,
     pub k1: String,
 }
 
-impl TryFrom<&[u8]> for Response {
+impl TryFrom<&[u8]> for Entrypoint {
     type Error = &'static str;
 
     fn try_from(s: &[u8]) -> Result<Self, Self::Error> {
-        let d: de::Response = serde_json::from_slice(s).map_err(|_| "deserialize failed")?;
+        let d: de::Entrypoint = serde_json::from_slice(s).map_err(|_| "deserialize failed")?;
 
-        Ok(Response {
+        Ok(Entrypoint {
             callback: d.callback,
             uri: d.uri,
             k1: d.k1,
@@ -19,10 +19,10 @@ impl TryFrom<&[u8]> for Response {
     }
 }
 
-impl Response {
+impl Entrypoint {
     #[must_use]
-    pub fn callback_accept<'a>(&'a self, remoteid: &'a str, private: bool) -> CallbackQuery<'a> {
-        CallbackQuery::Accept {
+    pub fn accept<'a>(&'a self, remoteid: &'a str, private: bool) -> Callback<'a> {
+        Callback::Accept {
             url: &self.callback,
             k1: &self.k1,
             remoteid,
@@ -31,8 +31,8 @@ impl Response {
     }
 
     #[must_use]
-    pub fn callback_cancel<'a>(&'a self, remoteid: &'a str) -> CallbackQuery<'a> {
-        CallbackQuery::Cancel {
+    pub fn cancel<'a>(&'a self, remoteid: &'a str) -> Callback<'a> {
+        Callback::Cancel {
             url: &self.callback,
             k1: &self.k1,
             remoteid,
@@ -41,7 +41,7 @@ impl Response {
 }
 
 #[derive(Clone, Debug)]
-pub enum CallbackQuery<'a> {
+pub enum Callback<'a> {
     Accept {
         url: &'a url::Url,
         k1: &'a str,
@@ -55,17 +55,17 @@ pub enum CallbackQuery<'a> {
     },
 }
 
-impl std::fmt::Display for CallbackQuery<'_> {
+impl std::fmt::Display for Callback<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (url, query) = match self {
-            CallbackQuery::Accept {
+            Callback::Accept {
                 url,
                 k1,
                 remoteid,
                 private,
             } => (
                 url,
-                super::serde::CallbackQuery::Accept {
+                super::serde::Callback::Accept {
                     k1,
                     remoteid,
                     private: if *private {
@@ -75,9 +75,9 @@ impl std::fmt::Display for CallbackQuery<'_> {
                     },
                 },
             ),
-            CallbackQuery::Cancel { url, k1, remoteid } => (
+            Callback::Cancel { url, k1, remoteid } => (
                 url,
-                super::serde::CallbackQuery::Cancel {
+                super::serde::Callback::Cancel {
                     k1,
                     remoteid,
                     cancel: super::serde::OneOnly::One,
@@ -120,7 +120,7 @@ mod de {
     use url::Url;
 
     #[derive(Deserialize)]
-    pub(super) struct Response {
+    pub(super) struct Entrypoint {
         pub callback: Url,
         pub uri: String,
         pub k1: String,
@@ -130,14 +130,14 @@ mod de {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn response_parse() {
+    fn entrypoint_parse() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "uri": "noh@ipe:porta",
             "k1": "caum"
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(parsed.callback.as_str(), "https://yuri/?o=callback");
         assert_eq!(parsed.uri, "noh@ipe:porta");
@@ -145,22 +145,22 @@ mod tests {
     }
 
     #[test]
-    fn callback_query_accept_render() {
+    fn callback_accept_render() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "uri": "noh@ipe:porta",
             "k1": "caum"
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
-        let url = parsed.callback_accept("idremoto", true);
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
+        let url = parsed.accept("idremoto", true);
 
         assert_eq!(
             url.to_string(),
             "https://yuri/?o=callback&k1=caum&remoteid=idremoto&private=1"
         );
 
-        let url = parsed.callback_accept("idremoto", false);
+        let url = parsed.accept("idremoto", false);
 
         assert_eq!(
             url.to_string(),
@@ -169,15 +169,15 @@ mod tests {
     }
 
     #[test]
-    fn callback_query_cancel_render() {
+    fn callback_cancel_render() {
         let input = r#"{
             "callback": "https://yuri?o=callback",
             "uri": "noh@ipe:porta",
             "k1": "caum"
         }"#;
 
-        let parsed: super::Response = input.as_bytes().try_into().expect("parse");
-        let url = parsed.callback_cancel("idremoto");
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
+        let url = parsed.cancel("idremoto");
 
         assert_eq!(
             url.to_string(),

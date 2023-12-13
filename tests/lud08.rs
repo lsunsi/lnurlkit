@@ -9,7 +9,7 @@ async fn test() {
     let callback = url::Url::parse(&format!("http://{addr}/lnurlw/callback")).expect("url");
     let callback2 = url::Url::parse(&format!("http://{addr}/lnurlw/callback")).expect("url");
 
-    let w = lnurlkit::withdraw::server::Response {
+    let w = lnurlkit::withdraw::server::Entrypoint {
         description: String::from("descricao"),
         k1: String::from("caum"),
         callback: callback.clone(),
@@ -25,7 +25,7 @@ async fn test() {
             move |()| {
                 let callback = callback.clone();
                 async move {
-                    Ok(lnurlkit::withdraw::server::Response {
+                    Ok(lnurlkit::withdraw::server::Entrypoint {
                         description: String::from("outra-descricao"),
                         k1: String::from("cadois"),
                         callback,
@@ -34,7 +34,7 @@ async fn test() {
                     })
                 }
             },
-            |_: lnurlkit::withdraw::server::CallbackQuery| async { unimplemented!() },
+            |_: lnurlkit::withdraw::server::Callback| async { unimplemented!() },
         )
         .build();
 
@@ -51,8 +51,8 @@ async fn test() {
     )
     .expect("lnurl");
 
-    let queried = client.query(&lnurl).await.expect("query");
-    let lnurlkit::client::Response::Withdraw(wr) = queried else {
+    let queried = client.entrypoint(&lnurl).await.expect("query");
+    let lnurlkit::client::Entrypoint::Withdraw(wr) = queried else {
         panic!("not pay request");
     };
 
@@ -68,8 +68,8 @@ async fn test() {
     )
     .expect("lnurl");
 
-    let queried = client.query(&lnurl).await.expect("query");
-    let lnurlkit::client::Response::Withdraw(wr) = queried else {
+    let queried = client.entrypoint(&lnurl).await.expect("query");
+    let lnurlkit::client::Entrypoint::Withdraw(wr) = queried else {
         panic!("not pay request");
     };
 

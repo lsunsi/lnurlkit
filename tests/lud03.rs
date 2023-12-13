@@ -14,7 +14,7 @@ async fn test() {
             move |()| {
                 let callback = callback_url.clone();
                 async {
-                    Ok(lnurlkit::withdraw::server::Response {
+                    Ok(lnurlkit::withdraw::server::Entrypoint {
                         description: String::from("descricao"),
                         k1: String::from("caum"),
                         callback,
@@ -23,7 +23,7 @@ async fn test() {
                     })
                 }
             },
-            |req: lnurlkit::withdraw::server::CallbackQuery| async move {
+            |req: lnurlkit::withdraw::server::Callback| async move {
                 Ok(if &req.pr as &str == "pierre" {
                     lnurlkit::withdraw::server::CallbackResponse::Ok
                 } else {
@@ -48,8 +48,8 @@ async fn test() {
     )
     .expect("lnurl");
 
-    let queried = client.query(&lnurl).await.expect("query");
-    let lnurlkit::client::Response::Withdraw(wr) = queried else {
+    let queried = client.entrypoint(&lnurl).await.expect("query");
+    let lnurlkit::client::Entrypoint::Withdraw(wr) = queried else {
         panic!("not pay request");
     };
 
@@ -57,14 +57,14 @@ async fn test() {
     assert_eq!(wr.core.max, 315);
     assert_eq!(&wr.core.description as &str, "descricao");
 
-    let response = wr.callback("pierre").await.expect("callback");
+    let response = wr.submit("pierre").await.expect("callback");
 
     assert!(matches!(
         response,
         lnurlkit::withdraw::client::CallbackResponse::Ok
     ));
 
-    let response = wr.callback("pierrado").await.expect("callback");
+    let response = wr.submit("pierrado").await.expect("callback");
 
     assert!(matches!(
         response,

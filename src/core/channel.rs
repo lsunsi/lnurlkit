@@ -7,7 +7,7 @@ mod serde {
 
     #[derive(Deserialize, Serialize)]
     #[serde(untagged)]
-    pub(super) enum CallbackQuery<'a> {
+    pub(super) enum Callback<'a> {
         Accept {
             k1: &'a str,
             remoteid: &'a str,

@@ -1,5 +1,5 @@
 #[derive(Clone, Debug)]
-pub struct Response {
+pub struct Entrypoint {
     pub callback: url::Url,
     pub short_description: String,
     pub long_description: Option<String>,
@@ -12,10 +12,10 @@ pub struct Response {
     pub max: u64,
 }
 
-impl TryFrom<Response> for Vec<u8> {
+impl TryFrom<Entrypoint> for Vec<u8> {
     type Error = &'static str;
 
-    fn try_from(r: Response) -> Result<Self, Self::Error> {
+    fn try_from(r: Entrypoint) -> Result<Self, Self::Error> {
         use base64::{prelude::BASE64_STANDARD, Engine};
 
         let metadata = serde_json::to_string(
@@ -41,7 +41,7 @@ impl TryFrom<Response> for Vec<u8> {
         )
         .map_err(|_| "serialize failed")?;
 
-        serde_json::to_vec(&ser::Response {
+        serde_json::to_vec(&ser::Entrypoint {
             tag: super::TAG,
             metadata,
             callback: &r.callback,
@@ -53,18 +53,18 @@ impl TryFrom<Response> for Vec<u8> {
     }
 }
 
-pub struct CallbackQuery {
+pub struct Callback {
     pub millisatoshis: u64,
     pub comment: Option<String>,
 }
 
-impl<'a> TryFrom<&'a str> for CallbackQuery {
+impl<'a> TryFrom<&'a str> for Callback {
     type Error = &'static str;
 
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
         serde_urlencoded::from_str::<super::serde::CallbackQuery>(s)
             .map_err(|_| "deserialize failed")
-            .map(|query| CallbackQuery {
+            .map(|query| Callback {
                 millisatoshis: query.amount,
                 comment: query.comment.map(String::from),
             })
@@ -120,7 +120,7 @@ mod ser {
     use url::Url;
 
     #[derive(Serialize)]
-    pub(super) struct Response<'a> {
+    pub(super) struct Entrypoint<'a> {
         pub tag: &'static str,
         pub metadata: String,
         pub callback: &'a Url,
@@ -144,8 +144,8 @@ mod ser {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn response_render_base() {
-        let query = super::Response {
+    fn entrypoint_render_base() {
+        let query = super::Entrypoint {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             short_description: String::from("boneco do steve magal"),
             long_description: None,
@@ -165,8 +165,8 @@ mod tests {
     }
 
     #[test]
-    fn response_render_comment_size() {
-        let query = super::Response {
+    fn entrypoint_render_comment_size() {
+        let query = super::Entrypoint {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             short_description: String::from("boneco do steve magal"),
             long_description: None,
@@ -186,8 +186,8 @@ mod tests {
     }
 
     #[test]
-    fn response_render_long_description() {
-        let query = super::Response {
+    fn entrypoint_render_long_description() {
+        let query = super::Entrypoint {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             short_description: String::from("boneco do steve magal"),
             long_description: Some(String::from("mochila a jato brutal incluida")),
@@ -207,8 +207,8 @@ mod tests {
     }
 
     #[test]
-    fn response_render_images() {
-        let query = super::Response {
+    fn entrypoint_render_images() {
+        let query = super::Entrypoint {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             short_description: String::from("boneco do steve magal"),
             long_description: None,
@@ -228,8 +228,8 @@ mod tests {
     }
 
     #[test]
-    fn response_render_identifier() {
-        let query = super::Response {
+    fn entrypoint_render_identifier() {
+        let query = super::Entrypoint {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             short_description: String::from("boneco do steve magal"),
             long_description: None,
@@ -249,8 +249,8 @@ mod tests {
     }
 
     #[test]
-    fn response_render_email() {
-        let query = super::Response {
+    fn entrypoint_render_email() {
+        let query = super::Entrypoint {
             callback: url::Url::parse("https://yuri?o=callback").expect("url"),
             short_description: String::from("boneco do steve magal"),
             long_description: None,
@@ -270,18 +270,18 @@ mod tests {
     }
 
     #[test]
-    fn callback_query_parse_base() {
+    fn callback_parse_base() {
         let input = "amount=314";
-        let parsed: super::CallbackQuery = input.try_into().expect("parse");
+        let parsed: super::Callback = input.try_into().expect("parse");
 
         assert_eq!(parsed.millisatoshis, 314);
         assert!(parsed.comment.is_none());
     }
 
     #[test]
-    fn callback_query_parse_comment() {
+    fn callback_parse_comment() {
         let input = "amount=314&comment=comentario";
-        let parsed: super::CallbackQuery = input.try_into().expect("parse");
+        let parsed: super::Callback = input.try_into().expect("parse");
 
         assert_eq!(parsed.millisatoshis, 314);
         assert_eq!(parsed.comment.unwrap(), "comentario");

@@ -5,13 +5,13 @@ impl Client {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
-    pub async fn query(&self, s: &str) -> Result<Response, &'static str> {
+    pub async fn entrypoint(&self, s: &str) -> Result<Entrypoint, &'static str> {
         let client = &self.0;
 
         let url = match crate::resolve(s)? {
             crate::Resolved::Url(url) => url,
             crate::Resolved::Withdraw(_, core) => {
-                return Ok(Response::Withdraw(Withdraw { client, core }))
+                return Ok(Entrypoint::Withdraw(Withdraw { client, core }))
             }
         };
 
@@ -21,16 +21,18 @@ impl Client {
         (&bytes as &[u8])
             .try_into()
             .map_err(|_| "parse failed")
-            .map(|query: crate::Response| match query {
-                crate::Response::Channel(core) => Response::Channel(Channel { client, core }),
-                crate::Response::Pay(core) => Response::Pay(Pay { client, core }),
-                crate::Response::Withdraw(core) => Response::Withdraw(Withdraw { client, core }),
+            .map(|query: crate::Entrypoint| match query {
+                crate::Entrypoint::Channel(core) => Entrypoint::Channel(Channel { client, core }),
+                crate::Entrypoint::Pay(core) => Entrypoint::Pay(Pay { client, core }),
+                crate::Entrypoint::Withdraw(core) => {
+                    Entrypoint::Withdraw(Withdraw { client, core })
+                }
             })
     }
 }
 
 #[derive(Clone, Debug)]
-pub enum Response<'a> {
+pub enum Entrypoint<'a> {
     Channel(Channel<'a>),
     Pay(Pay<'a>),
     Withdraw(Withdraw<'a>),
@@ -39,31 +41,31 @@ pub enum Response<'a> {
 #[derive(Clone, Debug)]
 pub struct Channel<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::channel::client::Response,
+    pub core: crate::channel::client::Entrypoint,
 }
 
 #[derive(Clone, Debug)]
 pub struct Pay<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::pay::client::Response,
+    pub core: crate::pay::client::Entrypoint,
 }
 
 #[derive(Clone, Debug)]
 pub struct Withdraw<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::withdraw::client::Response,
+    pub core: crate::withdraw::client::Entrypoint,
 }
 
 impl Channel<'_> {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
-    pub async fn callback_accept(
+    pub async fn accept(
         &self,
         remoteid: &str,
         private: bool,
     ) -> Result<crate::channel::client::CallbackResponse, &'static str> {
-        let callback = self.core.callback_accept(remoteid, private);
+        let callback = self.core.accept(remoteid, private);
 
         let response = self
             .client
@@ -79,11 +81,11 @@ impl Channel<'_> {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
-    pub async fn callback_cancel(
+    pub async fn cancel(
         &self,
         remoteid: &str,
     ) -> Result<crate::channel::client::CallbackResponse, &'static str> {
-        let callback = self.core.callback_cancel(remoteid);
+        let callback = self.core.cancel(remoteid);
 
         let response = self
             .client
@@ -101,12 +103,12 @@ impl Pay<'_> {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
-    pub async fn callback(
+    pub async fn invoice(
         &self,
         millisatoshis: u64,
         comment: Option<&str>,
     ) -> Result<crate::pay::client::CallbackResponse, &'static str> {
-        let callback = self.core.callback(millisatoshis, comment);
+        let callback = self.core.invoice(millisatoshis, comment);
 
         let response = self
             .client
@@ -124,11 +126,11 @@ impl Withdraw<'_> {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
-    pub async fn callback(
+    pub async fn submit(
         &self,
         pr: &str,
     ) -> Result<crate::withdraw::client::CallbackResponse, &'static str> {
-        let callback = self.core.callback(pr);
+        let callback = self.core.submit(pr);
 
         let response = self
             .client

@@ -4,7 +4,7 @@ pub mod withdraw;
 
 pub enum Resolved {
     Url(url::Url),
-    Withdraw(url::Url, withdraw::client::Response),
+    Withdraw(url::Url, withdraw::client::Entrypoint),
 }
 
 /// # Errors
@@ -26,7 +26,7 @@ pub fn resolve(s: &str) -> Result<Resolved, &'static str> {
         .find_map(|(k, v)| (k == "tag").then_some(v));
 
     Ok(match tag.as_deref() {
-        Some(withdraw::TAG) => match url.as_str().parse::<withdraw::client::Response>() {
+        Some(withdraw::TAG) => match url.as_str().parse::<withdraw::client::Entrypoint>() {
             Ok(w) => Resolved::Withdraw(url, w),
             Err(_) => Resolved::Url(url),
         },
@@ -86,13 +86,13 @@ fn resolve_address(s: &str) -> Result<url::Url, &'static str> {
 }
 
 #[derive(Debug)]
-pub enum Response {
-    Channel(channel::client::Response),
-    Pay(pay::client::Response),
-    Withdraw(withdraw::client::Response),
+pub enum Entrypoint {
+    Channel(channel::client::Entrypoint),
+    Pay(pay::client::Entrypoint),
+    Withdraw(withdraw::client::Entrypoint),
 }
 
-impl TryFrom<&[u8]> for Response {
+impl TryFrom<&[u8]> for Entrypoint {
     type Error = &'static str;
 
     fn try_from(s: &[u8]) -> Result<Self, Self::Error> {
@@ -105,13 +105,13 @@ impl TryFrom<&[u8]> for Response {
 
         if tag.tag == channel::TAG {
             let cr = s.try_into().map_err(|_| "deserialize data failed")?;
-            Ok(Response::Channel(cr))
+            Ok(Entrypoint::Channel(cr))
         } else if tag.tag == pay::TAG {
             let pr = s.try_into().map_err(|_| "deserialize data failed")?;
-            Ok(Response::Pay(pr))
+            Ok(Entrypoint::Pay(pr))
         } else if tag.tag == withdraw::TAG {
             let wr = s.try_into().map_err(|_| "deserialize data failed")?;
-            Ok(Response::Withdraw(wr))
+            Ok(Entrypoint::Withdraw(wr))
         } else {
             Err("unknown tag")
         }

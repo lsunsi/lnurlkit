@@ -18,21 +18,18 @@ pub struct Server<CQ, CC, PQ, PC, WQ, WC> {
 impl Default
     for Server<
         // Channel Request
-        unimplemented::Handler<(), crate::channel::server::Response>,
+        unimplemented::Handler<(), crate::channel::server::Entrypoint>,
         unimplemented::Handler<
-            crate::channel::server::CallbackQuery,
+            crate::channel::server::Callback,
             crate::channel::server::CallbackResponse,
         >,
         // Pay Request
-        unimplemented::Handler<Option<String>, crate::pay::server::Response>,
-        unimplemented::Handler<
-            crate::pay::server::CallbackQuery,
-            crate::pay::server::CallbackResponse,
-        >,
+        unimplemented::Handler<Option<String>, crate::pay::server::Entrypoint>,
+        unimplemented::Handler<crate::pay::server::Callback, crate::pay::server::CallbackResponse>,
         // Withdraw Request
-        unimplemented::Handler<(), crate::withdraw::server::Response>,
+        unimplemented::Handler<(), crate::withdraw::server::Entrypoint>,
         unimplemented::Handler<
-            crate::withdraw::server::CallbackQuery,
+            crate::withdraw::server::Callback,
             crate::withdraw::server::CallbackResponse,
         >,
     >
@@ -102,21 +99,21 @@ impl<CQ, CQFut, CC, CCFut, PQ, PQFut, PC, PCFut, WQ, WQFut, WC, WCFut>
     Server<CQ, CC, PQ, PC, WQ, WC>
 where
     CQ: 'static + Send + Clone + Fn(()) -> CQFut,
-    CQFut: Send + Future<Output = Result<crate::channel::server::Response, StatusCode>>,
+    CQFut: Send + Future<Output = Result<crate::channel::server::Entrypoint, StatusCode>>,
 
-    CC: 'static + Send + Clone + Fn(crate::channel::server::CallbackQuery) -> CCFut,
+    CC: 'static + Send + Clone + Fn(crate::channel::server::Callback) -> CCFut,
     CCFut: Send + Future<Output = Result<crate::channel::server::CallbackResponse, StatusCode>>,
 
     PQ: 'static + Send + Clone + Fn(Option<String>) -> PQFut,
-    PQFut: Send + Future<Output = Result<crate::pay::server::Response, StatusCode>>,
+    PQFut: Send + Future<Output = Result<crate::pay::server::Entrypoint, StatusCode>>,
 
-    PC: 'static + Send + Clone + Fn(crate::pay::server::CallbackQuery) -> PCFut,
+    PC: 'static + Send + Clone + Fn(crate::pay::server::Callback) -> PCFut,
     PCFut: Send + Future<Output = Result<crate::pay::server::CallbackResponse, StatusCode>>,
 
     WQ: 'static + Send + Clone + Fn(()) -> WQFut,
-    WQFut: Send + Future<Output = Result<crate::withdraw::server::Response, StatusCode>>,
+    WQFut: Send + Future<Output = Result<crate::withdraw::server::Entrypoint, StatusCode>>,
 
-    WC: 'static + Send + Clone + Fn(crate::withdraw::server::CallbackQuery) -> WCFut,
+    WC: 'static + Send + Clone + Fn(crate::withdraw::server::Callback) -> WCFut,
     WCFut: Send + Future<Output = Result<crate::withdraw::server::CallbackResponse, StatusCode>>,
 {
     #[allow(clippy::too_many_lines)]
