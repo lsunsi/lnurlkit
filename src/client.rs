@@ -10,6 +10,12 @@ impl Client {
 
         let url = match crate::resolve(s)? {
             crate::Resolved::Url(url) => url,
+            crate::Resolved::Auth(_, core) => {
+                return Ok(Entrypoint::Auth(Auth {
+                    _client: client,
+                    core,
+                }))
+            }
             crate::Resolved::Withdraw(_, core) => {
                 return Ok(Entrypoint::Withdraw(Withdraw { client, core }))
             }
@@ -33,9 +39,16 @@ impl Client {
 
 #[derive(Clone, Debug)]
 pub enum Entrypoint<'a> {
+    Auth(Auth<'a>),
     Channel(Channel<'a>),
     Pay(Pay<'a>),
     Withdraw(Withdraw<'a>),
+}
+
+#[derive(Clone, Debug)]
+pub struct Auth<'a> {
+    _client: &'a reqwest::Client,
+    pub core: crate::auth::Entrypoint,
 }
 
 #[derive(Clone, Debug)]

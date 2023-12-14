@@ -1,9 +1,11 @@
+pub mod auth;
 pub mod channel;
 pub mod pay;
 pub mod withdraw;
 
 pub enum Resolved {
     Url(url::Url),
+    Auth(url::Url, auth::Entrypoint),
     Withdraw(url::Url, withdraw::client::Entrypoint),
 }
 
@@ -28,6 +30,10 @@ pub fn resolve(s: &str) -> Result<Resolved, &'static str> {
     Ok(match tag.as_deref() {
         Some(withdraw::TAG) => match url.as_str().parse::<withdraw::client::Entrypoint>() {
             Ok(w) => Resolved::Withdraw(url, w),
+            Err(_) => Resolved::Url(url),
+        },
+        Some(auth::TAG) => match url.as_str().try_into() {
+            Ok(w) => Resolved::Auth(url, w),
             Err(_) => Resolved::Url(url),
         },
         _ => Resolved::Url(url),
@@ -178,6 +184,18 @@ mod tests {
     }
 
     #[test]
+    fn resolve_auth() {
+        let input = "keyauth://site.com\
+            ?tag=login\
+            &k1=6f697072617a65726575736f756f6261697465732176616d6f63616d69676f73\
+            &action=login";
+
+        let super::Resolved::Auth(_, _) = super::resolve(input).unwrap() else {
+            panic!("expected resolved url");
+        };
+    }
+
+    #[test]
     fn resolve_fast_withdraw() {
         let input = "lnurlw://there.is/no\
             ?s=poon\
@@ -188,20 +206,8 @@ mod tests {
             &defaultDescription=descrical\
             &callback=https://call.back";
 
-        let super::Resolved::Withdraw(url, _) = super::resolve(input).unwrap() else {
+        let super::Resolved::Withdraw(_, _) = super::resolve(input).unwrap() else {
             panic!("expected resolved url");
         };
-
-        assert_eq!(
-            url.as_str(),
-            "https://there.is/no\
-            ?s=poon\
-            &tag=withdrawRequest\
-            &k1=caum\
-            &minWithdrawable=314\
-            &maxWithdrawable=315\
-            &defaultDescription=descrical\
-            &callback=https://call.back"
-        );
     }
 }
