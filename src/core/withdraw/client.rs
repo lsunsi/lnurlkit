@@ -23,11 +23,14 @@ impl TryFrom<&[u8]> for Entrypoint {
     }
 }
 
-impl std::str::FromStr for Entrypoint {
-    type Err = &'static str;
+impl TryFrom<&str> for Entrypoint {
+    type Error = &'static str;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let d: de::Entrypoint = serde_urlencoded::from_str(s).map_err(|_| "deserialize failed")?;
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        let url = url::Url::parse(s).map_err(|_| "url parse failed")?;
+        let query = url.query().ok_or("missing query")?;
+        let d = serde_urlencoded::from_str::<de::Entrypoint>(query)
+            .map_err(|_| "deserialize failed")?;
 
         Ok(Entrypoint {
             k1: d.k1,
@@ -135,15 +138,13 @@ mod tests {
     #[test]
     fn entrypoint_string_parse() {
         let input = "lnurlw://there.is/no\
-            ?s=poon\
-            &tag=withdrawRequest\
-            &k1=caum\
+            ?k1=caum\
             &minWithdrawable=314\
             &maxWithdrawable=315\
             &defaultDescription=descricao\
             &callback=https://call.back";
 
-        let parsed: super::Entrypoint = input.parse().expect("parse");
+        let parsed: super::Entrypoint = input.try_into().expect("parse");
 
         assert_eq!(parsed.callback.to_string(), "https://call.back/");
         assert_eq!(parsed.description, "descricao");

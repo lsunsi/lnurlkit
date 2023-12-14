@@ -28,7 +28,7 @@ pub fn resolve(s: &str) -> Result<Resolved, &'static str> {
         .find_map(|(k, v)| (k == "tag").then_some(v));
 
     Ok(match tag.as_deref() {
-        Some(withdraw::TAG) => match url.as_str().parse::<withdraw::client::Entrypoint>() {
+        Some(withdraw::TAG) => match url.as_str().try_into() {
             Ok(w) => Resolved::Withdraw(url, w),
             Err(_) => Resolved::Url(url),
         },
