@@ -25,10 +25,10 @@ async fn test() {
                 Ok(match req {
                     lnurlkit::channel::server::Callback::Cancel { remoteid, k1 } => {
                         if &remoteid as &str == "idremoto" {
-                            lnurlkit::channel::server::CallbackResponse::Ok
+                            lnurlkit::CallbackResponse::Ok
                         } else {
                             let reason = format!("Cancel/{k1}/{remoteid}");
-                            lnurlkit::channel::server::CallbackResponse::Error { reason }
+                            lnurlkit::CallbackResponse::Error { reason }
                         }
                     }
                     lnurlkit::channel::server::Callback::Accept {
@@ -37,7 +37,7 @@ async fn test() {
                         k1,
                     } => {
                         let reason = format!("Accept/{k1}/{remoteid}/{private}");
-                        lnurlkit::channel::server::CallbackResponse::Error { reason }
+                        lnurlkit::CallbackResponse::Error { reason }
                     }
                 })
             },
@@ -66,29 +66,26 @@ async fn test() {
 
     let response = cr.cancel("idremoto").await.expect("callback");
 
-    assert!(matches!(
-        response,
-        lnurlkit::channel::client::CallbackResponse::Ok
-    ));
+    assert!(matches!(response, lnurlkit::CallbackResponse::Ok));
 
     let response = cr.cancel("iderrado").await.expect("callback");
 
     assert!(matches!(
         response,
-        lnurlkit::channel::client::CallbackResponse::Error { reason } if &reason as &str == "Cancel/caum/iderrado"
+        lnurlkit::CallbackResponse::Error { reason } if &reason as &str == "Cancel/caum/iderrado"
     ));
 
     let response = cr.accept("iderrado", true).await.expect("callback");
 
     assert!(matches!(
         response,
-        lnurlkit::channel::client::CallbackResponse::Error { reason } if &reason as &str == "Accept/caum/iderrado/true"
+        lnurlkit::CallbackResponse::Error { reason } if &reason as &str == "Accept/caum/iderrado/true"
     ));
 
     let response = cr.accept("iderrado", false).await.expect("callback");
 
     assert!(matches!(
         response,
-        lnurlkit::channel::client::CallbackResponse::Error { reason } if &reason as &str == "Accept/caum/iderrado/false"
+        lnurlkit::CallbackResponse::Error { reason } if &reason as &str == "Accept/caum/iderrado/false"
     ));
 }

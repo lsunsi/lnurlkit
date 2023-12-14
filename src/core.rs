@@ -124,6 +124,44 @@ impl TryFrom<&[u8]> for Entrypoint {
     }
 }
 
+#[derive(Clone, Debug)]
+pub enum CallbackResponse {
+    Error { reason: String },
+    Ok,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(tag = "status", rename_all = "UPPERCASE")]
+enum CallbackResponseSerde {
+    Error { reason: String },
+    Ok,
+}
+
+impl TryFrom<&[u8]> for CallbackResponse {
+    type Error = &'static str;
+
+    fn try_from(s: &[u8]) -> Result<Self, &'static str> {
+        serde_json::from_slice::<CallbackResponseSerde>(s)
+            .map_err(|_| "deserialize failed")
+            .map(|a| match a {
+                CallbackResponseSerde::Error { reason } => CallbackResponse::Error { reason },
+                CallbackResponseSerde::Ok => CallbackResponse::Ok,
+            })
+    }
+}
+
+impl TryFrom<CallbackResponse> for Vec<u8> {
+    type Error = &'static str;
+
+    fn try_from(c: CallbackResponse) -> Result<Self, Self::Error> {
+        serde_json::to_vec(&match c {
+            CallbackResponse::Error { reason } => CallbackResponseSerde::Error { reason },
+            CallbackResponse::Ok => CallbackResponseSerde::Ok,
+        })
+        .map_err(|_| "deserialize failed")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -209,5 +247,34 @@ mod tests {
         let super::Resolved::Withdraw(_, _) = super::resolve(input).unwrap() else {
             panic!("expected resolved url");
         };
+    }
+
+    #[test]
+    fn callback_response_parse() {
+        assert!(matches!(
+            (br#"{ "status": "OK" }"# as &[u8]).try_into().unwrap(),
+            super::CallbackResponse::Ok
+        ));
+
+        assert!(matches!(
+            (br#"{ "status": "ERROR", "reason": "razao" }"# as &[u8]).try_into().unwrap(),
+            super::CallbackResponse::Error { reason } if reason == "razao"
+        ));
+    }
+
+    #[test]
+    fn callback_response_render() {
+        assert_eq!(
+            <Vec::<u8>>::try_from(super::CallbackResponse::Ok).unwrap(),
+            br#"{"status":"OK"}"#
+        );
+
+        assert_eq!(
+            <Vec::<u8>>::try_from(super::CallbackResponse::Error {
+                reason: String::from("razao")
+            })
+            .unwrap(),
+            br#"{"status":"ERROR","reason":"razao"}"#
+        );
     }
 }

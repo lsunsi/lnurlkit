@@ -73,30 +73,6 @@ impl std::fmt::Display for Callback<'_> {
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum CallbackResponse {
-    Error { reason: String },
-    Ok,
-}
-
-impl std::str::FromStr for CallbackResponse {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let map = serde_json::from_str::<std::collections::BTreeMap<String, String>>(s)
-            .map_err(|_| "bad json")?;
-
-        match map.get("status").map(|s| s as &str) {
-            Some("OK") => Ok(CallbackResponse::Ok),
-            Some("ERROR") => {
-                let reason = String::from(map.get("reason").ok_or("error without reason")?);
-                Ok(CallbackResponse::Error { reason })
-            }
-            _ => Err("bad status field"),
-        }
-    }
-}
-
 mod de {
     use serde::Deserialize;
     use url::Url;
@@ -169,18 +145,5 @@ mod tests {
             parsed.submit("pierre").to_string(),
             "https://yuri/?o=callback&k1=caum&pr=pierre"
         );
-    }
-
-    #[test]
-    fn callback_response_parse() {
-        assert!(matches!(
-            r#"{ "status": "OK" }"#.parse().unwrap(),
-            super::CallbackResponse::Ok
-        ));
-
-        assert!(matches!(
-            r#"{ "status": "ERROR", "reason": "razao" }"#.parse().unwrap(),
-            super::CallbackResponse::Error { reason } if reason == "razao"
-        ));
     }
 }

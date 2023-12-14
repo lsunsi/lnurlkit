@@ -77,7 +77,7 @@ impl Channel<'_> {
         &self,
         remoteid: &str,
         private: bool,
-    ) -> Result<crate::channel::client::CallbackResponse, &'static str> {
+    ) -> Result<crate::CallbackResponse, &'static str> {
         let callback = self.core.accept(remoteid, private);
 
         let response = self
@@ -87,17 +87,14 @@ impl Channel<'_> {
             .await
             .map_err(|_| "request failed")?;
 
-        let text = response.text().await.map_err(|_| "body failed")?;
-        text.parse().map_err(|_| "parse failed")
+        let bytes = response.bytes().await.map_err(|_| "body failed")?;
+        (&bytes as &[u8]).try_into().map_err(|_| "parse failed")
     }
 
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
-    pub async fn cancel(
-        &self,
-        remoteid: &str,
-    ) -> Result<crate::channel::client::CallbackResponse, &'static str> {
+    pub async fn cancel(&self, remoteid: &str) -> Result<crate::CallbackResponse, &'static str> {
         let callback = self.core.cancel(remoteid);
 
         let response = self
@@ -107,8 +104,8 @@ impl Channel<'_> {
             .await
             .map_err(|_| "request failed")?;
 
-        let text = response.text().await.map_err(|_| "body failed")?;
-        text.parse().map_err(|_| "parse failed")
+        let bytes = response.bytes().await.map_err(|_| "body failed")?;
+        (&bytes as &[u8]).try_into().map_err(|_| "parse failed")
     }
 }
 
@@ -139,10 +136,7 @@ impl Withdraw<'_> {
     /// # Errors
     ///
     /// Returns errors on network or deserialization failures.
-    pub async fn submit(
-        &self,
-        pr: &str,
-    ) -> Result<crate::withdraw::client::CallbackResponse, &'static str> {
+    pub async fn submit(&self, pr: &str) -> Result<crate::CallbackResponse, &'static str> {
         let callback = self.core.submit(pr);
 
         let response = self
@@ -152,7 +146,7 @@ impl Withdraw<'_> {
             .await
             .map_err(|_| "request failed")?;
 
-        let text = response.text().await.map_err(|_| "body failed")?;
-        text.parse().map_err(|_| "parse failed")
+        let bytes = response.bytes().await.map_err(|_| "body failed")?;
+        (&bytes as &[u8]).try_into().map_err(|_| "parse failed")
     }
 }

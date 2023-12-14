@@ -63,30 +63,6 @@ impl<'a> TryFrom<&'a str> for Callback {
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum CallbackResponse {
-    Error { reason: String },
-    Ok,
-}
-
-impl std::fmt::Display for CallbackResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut map = std::collections::BTreeMap::new();
-
-        match self {
-            CallbackResponse::Error { reason } => {
-                map.insert("status", "ERROR");
-                map.insert("reason", reason);
-            }
-            CallbackResponse::Ok => {
-                map.insert("status", "OK");
-            }
-        }
-
-        f.write_str(&serde_json::to_string(&map).map_err(|_| std::fmt::Error)?)
-    }
-}
-
 mod ser {
     use serde::Serialize;
     use url::Url;
@@ -168,21 +144,5 @@ mod tests {
         let input = "remoteid=idremoto&k1=caum&cancel=0";
         let parsed: Result<super::Callback, _> = input.try_into();
         assert!(parsed.is_err());
-    }
-
-    #[test]
-    fn callback_response_render() {
-        assert_eq!(
-            super::CallbackResponse::Ok.to_string(),
-            r#"{"status":"OK"}"#
-        );
-
-        assert_eq!(
-            super::CallbackResponse::Error {
-                reason: String::from("razao")
-            }
-            .to_string(),
-            r#"{"reason":"razao","status":"ERROR"}"#
-        );
     }
 }

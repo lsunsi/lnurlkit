@@ -25,9 +25,9 @@ async fn test() {
             },
             |req: lnurlkit::withdraw::server::Callback| async move {
                 Ok(if &req.pr as &str == "pierre" {
-                    lnurlkit::withdraw::server::CallbackResponse::Ok
+                    lnurlkit::CallbackResponse::Ok
                 } else {
-                    lnurlkit::withdraw::server::CallbackResponse::Error {
+                    lnurlkit::CallbackResponse::Error {
                         reason: req.k1.to_string(),
                     }
                 })
@@ -59,15 +59,12 @@ async fn test() {
 
     let response = wr.submit("pierre").await.expect("callback");
 
-    assert!(matches!(
-        response,
-        lnurlkit::withdraw::client::CallbackResponse::Ok
-    ));
+    assert!(matches!(response, lnurlkit::CallbackResponse::Ok));
 
     let response = wr.submit("pierrado").await.expect("callback");
 
     assert!(matches!(
         response,
-        lnurlkit::withdraw::client::CallbackResponse::Error { reason } if &reason as &str == "caum"
+        lnurlkit::CallbackResponse::Error { reason } if &reason as &str == "caum"
     ));
 }

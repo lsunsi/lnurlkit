@@ -19,19 +19,13 @@ impl Default
     for Server<
         // Channel Request
         unimplemented::Handler<(), crate::channel::server::Entrypoint>,
-        unimplemented::Handler<
-            crate::channel::server::Callback,
-            crate::channel::server::CallbackResponse,
-        >,
+        unimplemented::Handler<crate::channel::server::Callback, crate::CallbackResponse>,
         // Pay Request
         unimplemented::Handler<Option<String>, crate::pay::server::Entrypoint>,
         unimplemented::Handler<crate::pay::server::Callback, crate::pay::server::CallbackResponse>,
         // Withdraw Request
         unimplemented::Handler<(), crate::withdraw::server::Entrypoint>,
-        unimplemented::Handler<
-            crate::withdraw::server::Callback,
-            crate::withdraw::server::CallbackResponse,
-        >,
+        unimplemented::Handler<crate::withdraw::server::Callback, crate::CallbackResponse>,
     >
 {
     fn default() -> Self {
@@ -102,7 +96,7 @@ where
     CQFut: Send + Future<Output = Result<crate::channel::server::Entrypoint, StatusCode>>,
 
     CC: 'static + Send + Clone + Fn(crate::channel::server::Callback) -> CCFut,
-    CCFut: Send + Future<Output = Result<crate::channel::server::CallbackResponse, StatusCode>>,
+    CCFut: Send + Future<Output = Result<crate::CallbackResponse, StatusCode>>,
 
     PQ: 'static + Send + Clone + Fn(Option<String>) -> PQFut,
     PQFut: Send + Future<Output = Result<crate::pay::server::Entrypoint, StatusCode>>,
@@ -114,7 +108,7 @@ where
     WQFut: Send + Future<Output = Result<crate::withdraw::server::Entrypoint, StatusCode>>,
 
     WC: 'static + Send + Clone + Fn(crate::withdraw::server::Callback) -> WCFut,
-    WCFut: Send + Future<Output = Result<crate::withdraw::server::CallbackResponse, StatusCode>>,
+    WCFut: Send + Future<Output = Result<crate::CallbackResponse, StatusCode>>,
 {
     #[allow(clippy::too_many_lines)]
     pub fn build(self) -> Router<()> {
@@ -137,7 +131,9 @@ where
                     async move {
                         let q = q.ok_or(StatusCode::BAD_REQUEST)?;
                         let p = q.as_str().try_into().map_err(|_| StatusCode::BAD_REQUEST)?;
-                        cc(p).await.map(|a| a.to_string())
+                        cc(p).await.and_then(|a| {
+                            Vec::<u8>::try_from(a).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+                        })
                     }
                 }),
             )
@@ -196,7 +192,9 @@ where
                     async move {
                         let q = q.ok_or(StatusCode::BAD_REQUEST)?;
                         let p = q.as_str().try_into().map_err(|_| StatusCode::BAD_REQUEST)?;
-                        wc(p).await.map(|a| a.to_string())
+                        wc(p).await.and_then(|a| {
+                            Vec::<u8>::try_from(a).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+                        })
                     }
                 }),
             )

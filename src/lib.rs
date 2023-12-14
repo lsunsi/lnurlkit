@@ -1,7 +1,7 @@
 #![cfg_attr(all(doc, docsrs), feature(doc_auto_cfg))]
 
 mod core;
-pub use core::{auth, channel, pay, resolve, withdraw, Entrypoint, Resolved};
+pub use core::{auth, channel, pay, resolve, withdraw, CallbackResponse, Entrypoint, Resolved};
 
 #[cfg(feature = "client")]
 pub mod client;
