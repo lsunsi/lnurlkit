@@ -47,7 +47,7 @@ impl<'a> TryFrom<&'a str> for Callback {
     type Error = &'static str;
 
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
-        serde_urlencoded::from_str::<super::serde::CallbackQuery>(s)
+        serde_urlencoded::from_str::<super::serde::Callback>(s)
             .map_err(|_| "deserialize failed")
             .map(|query| Callback {
                 k1: String::from(query.k1),

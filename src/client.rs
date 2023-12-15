@@ -10,12 +10,7 @@ impl Client {
 
         let url = match crate::resolve(s)? {
             crate::Resolved::Url(url) => url,
-            crate::Resolved::Auth(_, core) => {
-                return Ok(Entrypoint::Auth(Auth {
-                    _client: client,
-                    core,
-                }))
-            }
+            crate::Resolved::Auth(_, core) => return Ok(Entrypoint::Auth(Auth { client, core })),
             crate::Resolved::Withdraw(_, core) => {
                 return Ok(Entrypoint::Withdraw(Withdraw { client, core }))
             }
@@ -47,7 +42,7 @@ pub enum Entrypoint<'a> {
 
 #[derive(Clone, Debug)]
 pub struct Auth<'a> {
-    _client: &'a reqwest::Client,
+    client: &'a reqwest::Client,
     pub core: crate::auth::Entrypoint,
 }
 
@@ -67,6 +62,29 @@ pub struct Pay<'a> {
 pub struct Withdraw<'a> {
     client: &'a reqwest::Client,
     pub core: crate::withdraw::client::Entrypoint,
+}
+
+impl Auth<'_> {
+    /// # Errors
+    ///
+    /// Returns errors on network or deserialization failures.
+    pub async fn auth(
+        &self,
+        key: &str,
+        sig: &[u8; 64],
+    ) -> Result<crate::CallbackResponse, &'static str> {
+        let callback = self.core.auth(key, sig);
+
+        let response = self
+            .client
+            .get(callback.to_string())
+            .send()
+            .await
+            .map_err(|_| "request failed")?;
+
+        let bytes = response.bytes().await.map_err(|_| "body failed")?;
+        (&bytes as &[u8]).try_into().map_err(|_| "parse failed")
+    }
 }
 
 impl Channel<'_> {
