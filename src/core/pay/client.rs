@@ -109,7 +109,7 @@ pub struct Callback<'a> {
 
 impl std::fmt::Display for Callback<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let query = super::serde::CallbackQuery {
+        let query = super::serde::Callback {
             comment: self.comment,
             amount: self.millisatoshis,
         };

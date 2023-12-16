@@ -6,7 +6,7 @@ mod serde {
     use serde::{Deserialize, Serialize};
 
     #[derive(Deserialize, Serialize)]
-    pub(super) struct CallbackQuery<'a> {
+    pub(super) struct Callback<'a> {
         pub comment: Option<&'a str>,
         pub amount: u64,
     }

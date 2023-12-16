@@ -58,6 +58,10 @@ name = "lud03"
 required-features = ["client", "server"]
 
 [[test]]
+name = "lud04"
+required-features = ["client", "server"]
+
+[[test]]
 name = "lud06"
 required-features = ["client", "server"]
 

@@ -6,17 +6,20 @@ use axum::{
 };
 use std::future::Future;
 
-pub struct Server<CQ, CC, PQ, PC, WQ, WC> {
-    channel_query: CQ,
+pub struct Server<AR, CE, CC, PE, PC, WE, WC> {
+    auth_request: AR,
+    channel_entrypoint: CE,
     channel_callback: CC,
-    pay_query: PQ,
+    pay_entrypoint: PE,
     pay_callback: PC,
-    withdraw_query: WQ,
+    withdraw_entrypoint: WE,
     withdraw_callback: WC,
 }
 
 impl Default
     for Server<
+        // Auth
+        unimplemented::Handler<crate::auth::server::Callback, crate::CallbackResponse>,
         // Channel Request
         unimplemented::Handler<(), crate::channel::server::Entrypoint>,
         unimplemented::Handler<crate::channel::server::Callback, crate::CallbackResponse>,
@@ -30,82 +33,102 @@ impl Default
 {
     fn default() -> Self {
         Server {
-            channel_query: unimplemented::handler,
+            auth_request: unimplemented::handler,
+
+            channel_entrypoint: unimplemented::handler,
             channel_callback: unimplemented::handler,
 
-            pay_query: unimplemented::handler,
+            pay_entrypoint: unimplemented::handler,
             pay_callback: unimplemented::handler,
 
-            withdraw_query: unimplemented::handler,
+            withdraw_entrypoint: unimplemented::handler,
             withdraw_callback: unimplemented::handler,
         }
     }
 }
 
-impl<CQ, CC, PQ, PC, WQ, WC> Server<CQ, CC, PQ, PC, WQ, WC> {
-    pub fn channel_request<CQ2, CC2>(
+impl<AR, CE, CC, PE, PC, WE, WC> Server<AR, CE, CC, PE, PC, WE, WC> {
+    pub fn auth<AR2>(self, auth_request: AR2) -> Server<AR2, CE, CC, PE, PC, WE, WC> {
+        Server {
+            auth_request,
+            channel_entrypoint: self.channel_entrypoint,
+            channel_callback: self.channel_callback,
+            pay_entrypoint: self.pay_entrypoint,
+            pay_callback: self.pay_callback,
+            withdraw_entrypoint: self.withdraw_entrypoint,
+            withdraw_callback: self.withdraw_callback,
+        }
+    }
+
+    pub fn channel_request<CE2, CC2>(
         self,
-        channel_query: CQ2,
+        channel_entrypoint: CE2,
         channel_callback: CC2,
-    ) -> Server<CQ2, CC2, PQ, PC, WQ, WC> {
+    ) -> Server<AR, CE2, CC2, PE, PC, WE, WC> {
         Server {
-            channel_query,
+            auth_request: self.auth_request,
+            channel_entrypoint,
             channel_callback,
-            pay_query: self.pay_query,
+            pay_entrypoint: self.pay_entrypoint,
             pay_callback: self.pay_callback,
-            withdraw_query: self.withdraw_query,
+            withdraw_entrypoint: self.withdraw_entrypoint,
             withdraw_callback: self.withdraw_callback,
         }
     }
 
-    pub fn pay_request<PQ2, PC2>(
+    pub fn pay_request<PE2, PC2>(
         self,
-        pay_query: PQ2,
+        pay_entrypoint: PE2,
         pay_callback: PC2,
-    ) -> Server<CQ, CC, PQ2, PC2, WQ, WC> {
+    ) -> Server<AR, CE, CC, PE2, PC2, WE, WC> {
         Server {
-            channel_query: self.channel_query,
+            auth_request: self.auth_request,
+            channel_entrypoint: self.channel_entrypoint,
             channel_callback: self.channel_callback,
-            pay_query,
+            pay_entrypoint,
             pay_callback,
-            withdraw_query: self.withdraw_query,
+            withdraw_entrypoint: self.withdraw_entrypoint,
             withdraw_callback: self.withdraw_callback,
         }
     }
 
-    pub fn withdraw_request<WQ2, WC2>(
+    pub fn withdraw_request<WE2, WC2>(
         self,
-        withdraw_query: WQ2,
+        withdraw_entrypoint: WE2,
         withdraw_callback: WC2,
-    ) -> Server<CQ, CC, PQ, PC, WQ2, WC2> {
+    ) -> Server<AR, CE, CC, PE, PC, WE2, WC2> {
         Server {
-            channel_query: self.channel_query,
+            auth_request: self.auth_request,
+            channel_entrypoint: self.channel_entrypoint,
             channel_callback: self.channel_callback,
-            pay_query: self.pay_query,
+            pay_entrypoint: self.pay_entrypoint,
             pay_callback: self.pay_callback,
-            withdraw_query,
+            withdraw_entrypoint,
             withdraw_callback,
         }
     }
 }
 
-impl<CQ, CQFut, CC, CCFut, PQ, PQFut, PC, PCFut, WQ, WQFut, WC, WCFut>
-    Server<CQ, CC, PQ, PC, WQ, WC>
+impl<AR, ARFut, CE, CQFut, CC, CCFut, PE, PEFut, PC, PCFut, WE, WEFut, WC, WCFut>
+    Server<AR, CE, CC, PE, PC, WE, WC>
 where
-    CQ: 'static + Send + Clone + Fn(()) -> CQFut,
+    AR: 'static + Send + Clone + Fn(crate::auth::server::Callback) -> ARFut,
+    ARFut: Send + Future<Output = Result<crate::CallbackResponse, StatusCode>>,
+
+    CE: 'static + Send + Clone + Fn(()) -> CQFut,
     CQFut: Send + Future<Output = Result<crate::channel::server::Entrypoint, StatusCode>>,
 
     CC: 'static + Send + Clone + Fn(crate::channel::server::Callback) -> CCFut,
     CCFut: Send + Future<Output = Result<crate::CallbackResponse, StatusCode>>,
 
-    PQ: 'static + Send + Clone + Fn(Option<String>) -> PQFut,
-    PQFut: Send + Future<Output = Result<crate::pay::server::Entrypoint, StatusCode>>,
+    PE: 'static + Send + Clone + Fn(Option<String>) -> PEFut,
+    PEFut: Send + Future<Output = Result<crate::pay::server::Entrypoint, StatusCode>>,
 
     PC: 'static + Send + Clone + Fn(crate::pay::server::Callback) -> PCFut,
     PCFut: Send + Future<Output = Result<crate::pay::server::CallbackResponse, StatusCode>>,
 
-    WQ: 'static + Send + Clone + Fn(()) -> WQFut,
-    WQFut: Send + Future<Output = Result<crate::withdraw::server::Entrypoint, StatusCode>>,
+    WE: 'static + Send + Clone + Fn(()) -> WEFut,
+    WEFut: Send + Future<Output = Result<crate::withdraw::server::Entrypoint, StatusCode>>,
 
     WC: 'static + Send + Clone + Fn(crate::withdraw::server::Callback) -> WCFut,
     WCFut: Send + Future<Output = Result<crate::CallbackResponse, StatusCode>>,
@@ -114,11 +137,24 @@ where
     pub fn build(self) -> Router<()> {
         Router::new()
             .route(
+                "/keyauth",
+                get(move |RawQuery(q): RawQuery| {
+                    let ar = self.auth_request.clone();
+                    async move {
+                        let q = q.ok_or(StatusCode::BAD_REQUEST)?;
+                        let p = q.as_str().try_into().map_err(|_| StatusCode::BAD_REQUEST)?;
+                        ar(p).await.and_then(|a| {
+                            Vec::<u8>::try_from(a).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+                        })
+                    }
+                }),
+            )
+            .route(
                 "/lnurlc",
                 get(move || {
-                    let cq = self.channel_query.clone();
+                    let ce = self.channel_entrypoint.clone();
                     async move {
-                        cq(()).await.and_then(|a| {
+                        ce(()).await.and_then(|a| {
                             Vec::<u8>::try_from(a).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
                         })
                     }
@@ -140,11 +176,11 @@ where
             .route(
                 "/.well-known/lnurlp/:identifier",
                 get({
-                    let pq = self.pay_query.clone();
+                    let pe = self.pay_entrypoint.clone();
                     move |Path(identifier): Path<String>| {
-                        let pq = pq.clone();
+                        let pe = pe.clone();
                         async move {
-                            pq(Some(identifier)).await.and_then(|a| {
+                            pe(Some(identifier)).await.and_then(|a| {
                                 Vec::<u8>::try_from(a)
                                     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
                             })
@@ -155,9 +191,9 @@ where
             .route(
                 "/lnurlp",
                 get(move || {
-                    let pq = self.pay_query.clone();
+                    let pe = self.pay_entrypoint.clone();
                     async move {
-                        pq(None).await.and_then(|a| {
+                        pe(None).await.and_then(|a| {
                             Vec::<u8>::try_from(a).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
                         })
                     }
@@ -177,9 +213,9 @@ where
             .route(
                 "/lnurlw",
                 get(move || {
-                    let wq = self.withdraw_query.clone();
+                    let we = self.withdraw_entrypoint.clone();
                     async move {
-                        wq(()).await.and_then(|a| {
+                        we(()).await.and_then(|a| {
                             Vec::<u8>::try_from(a).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
                         })
                     }
