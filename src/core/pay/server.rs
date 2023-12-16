@@ -10,6 +10,7 @@ pub struct Entrypoint {
     pub comment_size: Option<u64>,
     pub min: u64,
     pub max: u64,
+    pub currencies: Option<Vec<super::Currency>>,
 }
 
 impl TryFrom<Entrypoint> for Vec<u8> {
@@ -48,6 +49,18 @@ impl TryFrom<Entrypoint> for Vec<u8> {
             min_sendable: r.min,
             max_sendable: r.max,
             comment_allowed: r.comment_size.unwrap_or(0),
+            currencies: r.currencies.as_ref().map(|cs| {
+                cs.iter()
+                    .map(|c| super::serde::Currency {
+                        code: &c.code,
+                        name: &c.name,
+                        symbol: &c.symbol,
+                        decimals: c.decimals,
+                        multiplier: c.multiplier,
+                        convertible: c.convertible,
+                    })
+                    .collect()
+            }),
         })
         .map_err(|_| "serialize failed")
     }
@@ -115,6 +128,7 @@ impl std::fmt::Display for CallbackResponse {
 }
 
 mod ser {
+    use super::super::serde::Currency;
     use serde::Serialize;
     use std::collections::BTreeMap;
     use url::Url;
@@ -130,6 +144,8 @@ mod ser {
         pub max_sendable: u64,
         #[serde(rename = "commentAllowed")]
         pub comment_allowed: u64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub currencies: Option<Vec<Currency<'a>>>,
     }
 
     #[derive(Serialize)]
@@ -156,6 +172,7 @@ mod tests {
             max: 315,
             identifier: None,
             email: None,
+            currencies: None,
         };
 
         assert_eq!(
@@ -177,6 +194,7 @@ mod tests {
             max: 315,
             identifier: None,
             email: None,
+            currencies: None,
         };
 
         assert_eq!(
@@ -198,6 +216,7 @@ mod tests {
             max: 315,
             identifier: None,
             email: None,
+            currencies: None,
         };
 
         assert_eq!(
@@ -219,6 +238,7 @@ mod tests {
             max: 315,
             identifier: None,
             email: None,
+            currencies: None,
         };
 
         assert_eq!(
@@ -240,6 +260,7 @@ mod tests {
             max: 315,
             identifier: Some(String::from("steve@magal.brutal")),
             email: None,
+            currencies: None,
         };
 
         assert_eq!(
@@ -261,11 +282,51 @@ mod tests {
             max: 315,
             identifier: None,
             email: Some(String::from("steve@magal.brutal")),
+            currencies: None,
         };
 
         assert_eq!(
             Vec::<u8>::try_from(query).unwrap(),
             br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"],[\"image/jpeg;base64\",\"aW1hZ2VtYnJ1dGFs\"],[\"image/png;base64\",\"Zm90b2JydXRhbA==\"],[\"text/email\",\"steve@magal.brutal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0}"#
+        );
+    }
+
+    #[test]
+    fn entrypoint_render_currencies() {
+        let query = super::Entrypoint {
+            callback: url::Url::parse("https://yuri?o=callback").expect("url"),
+            short_description: String::from("boneco do steve magal"),
+            long_description: None,
+            jpeg: None,
+            png: None,
+            comment_size: None,
+            min: 314,
+            max: 315,
+            identifier: None,
+            email: None,
+            currencies: Some(vec![
+                super::super::Currency {
+                    code: String::from("BRL"),
+                    name: String::from("Reais"),
+                    symbol: String::from("R$"),
+                    decimals: 2,
+                    multiplier: 314.15,
+                    convertible: true,
+                },
+                super::super::Currency {
+                    code: String::from("USD"),
+                    name: String::from("Dolar"),
+                    symbol: String::from("$"),
+                    decimals: 6,
+                    multiplier: 123.321,
+                    convertible: false,
+                },
+            ]),
+        };
+
+        assert_eq!(
+            Vec::<u8>::try_from(query).unwrap(),
+            br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0,"currencies":[{"code":"BRL","name":"Reais","symbol":"R$","decimals":2,"multiplier":314.15,"convertible":true},{"code":"USD","name":"Dolar","symbol":"$","decimals":6,"multiplier":123.321,"convertible":false}]}"#
         );
     }
 

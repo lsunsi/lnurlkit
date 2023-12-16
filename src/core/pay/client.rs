@@ -11,6 +11,7 @@ pub struct Entrypoint {
     pub comment_size: Option<u64>,
     pub min: u64,
     pub max: u64,
+    pub currencies: Option<Vec<super::Currency>>,
 }
 
 impl TryFrom<&[u8]> for Entrypoint {
@@ -21,6 +22,19 @@ impl TryFrom<&[u8]> for Entrypoint {
         use serde_json::Value;
 
         let p: de::Entrypoint = serde_json::from_slice(s).map_err(|_| "deserialize failed")?;
+
+        let currencies = p.currencies.map(|cs| {
+            cs.into_iter()
+                .map(|c| super::Currency {
+                    code: String::from(c.code),
+                    name: String::from(c.name),
+                    symbol: String::from(c.symbol),
+                    decimals: c.decimals,
+                    multiplier: c.multiplier,
+                    convertible: c.convertible,
+                })
+                .collect()
+        });
 
         let metadata = serde_json::from_str::<Vec<(String, Value)>>(&p.metadata)
             .map_err(|_| "deserialize metadata failed")?;
@@ -86,6 +100,7 @@ impl TryFrom<&[u8]> for Entrypoint {
             email,
             jpeg,
             png,
+            currencies,
         })
     }
 }
@@ -160,12 +175,13 @@ impl std::str::FromStr for CallbackResponse {
 }
 
 mod de {
+    use super::super::serde::Currency;
     use serde::Deserialize;
     use std::collections::BTreeMap;
     use url::Url;
 
     #[derive(Deserialize)]
-    pub(super) struct Entrypoint {
+    pub(super) struct Entrypoint<'a> {
         pub metadata: String,
         pub callback: Url,
         #[serde(rename = "minSendable")]
@@ -174,6 +190,8 @@ mod de {
         pub max_sendable: u64,
         #[serde(rename = "commentAllowed")]
         pub comment_allowed: Option<u64>,
+        #[serde(borrow)]
+        pub currencies: Option<Vec<Currency<'a>>>,
     }
 
     #[derive(Deserialize)]
@@ -213,6 +231,7 @@ mod tests {
         assert!(parsed.png.is_none());
         assert!(parsed.identifier.is_none());
         assert!(parsed.email.is_none());
+        assert!(parsed.currencies.is_none());
     }
 
     #[test]
@@ -283,6 +302,50 @@ mod tests {
 
         let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
         assert_eq!(parsed.email.unwrap(), "steve@magal.brutal");
+    }
+
+    #[test]
+    fn entrypoint_parse_currencies() {
+        let input = r#"{
+            "callback": "https://yuri?o=callback",
+            "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/crazy\", \"👋🇧🇴💾\"]]",
+            "maxSendable": 315,
+            "minSendable": 314,
+            "currencies": [
+                {
+                    "code": "BRL",
+                    "name": "Reais",
+                    "symbol": "R$",
+                    "multiplier": 314.15,
+                    "decimals": 2,
+                    "convertible": true
+                },
+                {
+                    "code": "USD",
+                    "name": "Dólar",
+                    "symbol": "$",
+                    "decimals": 6,
+                    "multiplier": 14.5
+                }
+            ]
+        }"#;
+
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
+        let currencies = parsed.currencies.unwrap();
+
+        assert_eq!(currencies[0].code, "BRL");
+        assert_eq!(currencies[0].name, "Reais");
+        assert_eq!(currencies[0].symbol, "R$");
+        assert_eq!(currencies[0].decimals, 2);
+        assert!((currencies[0].multiplier - 314.15).abs() < f64::EPSILON);
+        assert!(currencies[0].convertible);
+
+        assert_eq!(currencies[1].code, "USD");
+        assert_eq!(currencies[1].name, "Dólar");
+        assert_eq!(currencies[1].symbol, "$");
+        assert_eq!(currencies[1].decimals, 6);
+        assert!((currencies[1].multiplier - 14.5).abs() < f64::EPSILON);
+        assert!(!currencies[1].convertible);
     }
 
     #[test]
