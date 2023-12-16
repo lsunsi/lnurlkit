@@ -84,3 +84,7 @@ required-features = ["client", "server"]
 [[test]]
 name = "lud16"
 required-features = ["client", "server"]
+
+[[test]]
+name = "lud21"
+required-features = ["client", "server"]
