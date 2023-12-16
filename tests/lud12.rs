@@ -60,7 +60,7 @@ async fn test() {
     assert_eq!(pr.core.comment_size.unwrap(), 140);
 
     let invoice = pr
-        .invoice(&lnurlkit::pay::Amount::Millisatoshis(314), None)
+        .invoice(&lnurlkit::pay::Amount::Millisatoshis(314), None, None)
         .await
         .expect("callback");
 
@@ -70,6 +70,7 @@ async fn test() {
         .invoice(
             &lnurlkit::pay::Amount::Millisatoshis(314),
             Some("comentario"),
+            None,
         )
         .await
         .expect("callback");

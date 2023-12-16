@@ -70,14 +70,18 @@ async fn test() {
     };
 
     let invoice = pr
-        .invoice(&lnurlkit::pay::Amount::Millisatoshis(0), None)
+        .invoice(&lnurlkit::pay::Amount::Millisatoshis(0), None, None)
         .await
         .expect("callback");
 
     assert!(invoice.success_action.is_none());
 
     let invoice = pr
-        .invoice(&lnurlkit::pay::Amount::Millisatoshis(1), Some("mensagem"))
+        .invoice(
+            &lnurlkit::pay::Amount::Millisatoshis(1),
+            Some("mensagem"),
+            None,
+        )
         .await
         .expect("callback");
 
@@ -88,7 +92,11 @@ async fn test() {
     assert_eq!(&m as &str, "mensagem");
 
     let invoice = pr
-        .invoice(&lnurlkit::pay::Amount::Millisatoshis(2), Some("descricao"))
+        .invoice(
+            &lnurlkit::pay::Amount::Millisatoshis(2),
+            Some("descricao"),
+            None,
+        )
         .await
         .expect("callback");
 

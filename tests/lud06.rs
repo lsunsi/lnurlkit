@@ -66,7 +66,11 @@ async fn test() {
     );
 
     let invoice = pr
-        .invoice(&lnurlkit::pay::Amount::Millisatoshis(314), Some("comment"))
+        .invoice(
+            &lnurlkit::pay::Amount::Millisatoshis(314),
+            Some("comment"),
+            None,
+        )
         .await
         .expect("callback");
 

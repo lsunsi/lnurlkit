@@ -69,6 +69,7 @@ impl TryFrom<Entrypoint> for Vec<u8> {
 pub struct Callback {
     pub amount: super::Amount,
     pub comment: Option<String>,
+    pub convert: Option<String>,
 }
 
 impl<'a> TryFrom<&'a str> for Callback {
@@ -77,9 +78,10 @@ impl<'a> TryFrom<&'a str> for Callback {
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
         serde_urlencoded::from_str::<de::Callback>(s)
             .map_err(|_| "deserialize failed")
-            .map(|query| Callback {
-                amount: query.amount,
-                comment: query.comment.map(String::from),
+            .map(|cb| Callback {
+                amount: cb.amount,
+                comment: cb.comment.map(String::from),
+                convert: cb.convert.map(String::from),
             })
     }
 }
@@ -165,6 +167,7 @@ mod de {
         pub comment: Option<&'a str>,
         #[serde(with = "super::super::serde::amount")]
         pub amount: super::super::Amount,
+        pub convert: Option<&'a str>,
     }
 }
 
@@ -375,6 +378,13 @@ mod tests {
             super::super::Amount::Currency(c, 314) if c == "BRL"
         ));
         assert!(parsed.comment.is_none());
+    }
+
+    #[test]
+    fn callback_parse_convert() {
+        let input = "amount=314&convert=BRL";
+        let parsed: super::Callback = input.try_into().expect("parse");
+        assert_eq!(parsed.convert.unwrap(), "BRL");
     }
 
     #[test]

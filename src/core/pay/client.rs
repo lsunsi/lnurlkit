@@ -111,11 +111,13 @@ impl Entrypoint {
         &'a self,
         amount: &'a super::Amount,
         comment: Option<&'a str>,
+        convert: Option<&'a str>,
     ) -> Callback<'a> {
         Callback {
             url: &self.callback,
             amount,
             comment,
+            convert,
         }
     }
 }
@@ -124,6 +126,7 @@ pub struct Callback<'a> {
     pub url: &'a url::Url,
     pub comment: Option<&'a str>,
     pub amount: &'a super::Amount,
+    pub convert: Option<&'a str>,
 }
 
 impl std::fmt::Display for Callback<'_> {
@@ -131,6 +134,7 @@ impl std::fmt::Display for Callback<'_> {
         let query = ser::Callback {
             comment: self.comment,
             amount: self.amount,
+            convert: self.convert,
         };
 
         let querystr = serde_urlencoded::to_string(query).map_err(|_| std::fmt::Error)?;
@@ -186,6 +190,7 @@ mod ser {
         pub comment: Option<&'a str>,
         #[serde(with = "super::super::serde::amount")]
         pub amount: &'a super::super::Amount,
+        pub convert: Option<&'a str>,
     }
 }
 
@@ -376,7 +381,7 @@ mod tests {
 
         assert_eq!(
             parsed
-                .invoice(&super::super::Amount::Millisatoshis(314), None)
+                .invoice(&super::super::Amount::Millisatoshis(314), None, None)
                 .to_string(),
             "https://yuri/?o=callback&amount=314"
         );
@@ -397,7 +402,8 @@ mod tests {
             parsed
                 .invoice(
                     &super::super::Amount::Millisatoshis(314),
-                    Some("comentario")
+                    Some("comentario"),
+                    None
                 )
                 .to_string(),
             "https://yuri/?o=callback&comment=comentario&amount=314"
@@ -419,10 +425,30 @@ mod tests {
             parsed
                 .invoice(
                     &super::super::Amount::Currency(String::from("BRL"), 314),
+                    None,
                     None
                 )
                 .to_string(),
             "https://yuri/?o=callback&amount=314.BRL"
+        );
+    }
+
+    #[test]
+    fn callback_render_convert() {
+        let input = r#"{
+            "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
+            "callback": "https://yuri?o=callback",
+            "maxSendable": 315,
+            "minSendable": 314
+        }"#;
+
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
+
+        assert_eq!(
+            parsed
+                .invoice(&super::super::Amount::Millisatoshis(314), None, Some("BRL"))
+                .to_string(),
+            "https://yuri/?o=callback&amount=314&convert=BRL"
         );
     }
 

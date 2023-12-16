@@ -58,14 +58,14 @@ async fn test() {
     };
 
     let invoice = pr
-        .invoice(&lnurlkit::pay::Amount::Millisatoshis(314), None)
+        .invoice(&lnurlkit::pay::Amount::Millisatoshis(314), None, None)
         .await
         .expect("callback");
 
     assert!(invoice.disposable);
 
     let invoice = pr
-        .invoice(&lnurlkit::pay::Amount::Millisatoshis(315), None)
+        .invoice(&lnurlkit::pay::Amount::Millisatoshis(315), None, None)
         .await
         .expect("callback");
     assert!(!invoice.disposable);

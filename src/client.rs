@@ -135,8 +135,9 @@ impl Pay<'_> {
         &self,
         amount: &crate::pay::Amount,
         comment: Option<&str>,
+        convert: Option<&str>,
     ) -> Result<crate::pay::client::CallbackResponse, &'static str> {
-        let callback = self.core.invoice(amount, comment);
+        let callback = self.core.invoice(amount, comment, convert);
 
         let response = self
             .client
