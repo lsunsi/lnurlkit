@@ -33,9 +33,10 @@ async fn test() {
                 Ok(lnurlkit::pay::server::CallbackResponse {
                     pr: String::new(),
                     disposable: false,
-                    success_action: if req.millisatoshis == 0 {
+                    success_action: if matches!(req.amount, lnurlkit::pay::Amount::Millisatoshis(0))
+                    {
                         None
-                    } else if req.millisatoshis == 1 {
+                    } else if matches!(req.amount, lnurlkit::pay::Amount::Millisatoshis(1)) {
                         Some(lnurlkit::pay::server::SuccessAction::Message(
                             req.comment.map(|a| a.to_string()).unwrap_or_default(),
                         ))
@@ -68,11 +69,17 @@ async fn test() {
         panic!("not pay request");
     };
 
-    let invoice = pr.invoice(0, None).await.expect("callback");
+    let invoice = pr
+        .invoice(&lnurlkit::pay::Amount::Millisatoshis(0), None)
+        .await
+        .expect("callback");
 
     assert!(invoice.success_action.is_none());
 
-    let invoice = pr.invoice(1, Some("mensagem")).await.expect("callback");
+    let invoice = pr
+        .invoice(&lnurlkit::pay::Amount::Millisatoshis(1), Some("mensagem"))
+        .await
+        .expect("callback");
 
     let Some(lnurlkit::pay::client::SuccessAction::Message(m)) = invoice.success_action else {
         panic!("bad success action");
@@ -80,7 +87,10 @@ async fn test() {
 
     assert_eq!(&m as &str, "mensagem");
 
-    let invoice = pr.invoice(2, Some("descricao")).await.expect("callback");
+    let invoice = pr
+        .invoice(&lnurlkit::pay::Amount::Millisatoshis(2), Some("descricao"))
+        .await
+        .expect("callback");
 
     let Some(lnurlkit::pay::client::SuccessAction::Url(u, d)) = invoice.success_action else {
         panic!("bad success action");

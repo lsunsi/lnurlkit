@@ -32,7 +32,7 @@ async fn test() {
             |req: lnurlkit::pay::server::Callback| async move {
                 Ok(lnurlkit::pay::server::CallbackResponse {
                     pr: String::new(),
-                    disposable: req.millisatoshis % 2 == 0,
+                    disposable: matches!(req.amount, lnurlkit::pay::Amount::Millisatoshis(a) if a % 2 == 0),
                     success_action: None,
                 })
             },
@@ -57,10 +57,16 @@ async fn test() {
         panic!("not pay request");
     };
 
-    let invoice = pr.invoice(314, None).await.expect("callback");
+    let invoice = pr
+        .invoice(&lnurlkit::pay::Amount::Millisatoshis(314), None)
+        .await
+        .expect("callback");
 
     assert!(invoice.disposable);
 
-    let invoice = pr.invoice(315, None).await.expect("callback");
+    let invoice = pr
+        .invoice(&lnurlkit::pay::Amount::Millisatoshis(315), None)
+        .await
+        .expect("callback");
     assert!(!invoice.disposable);
 }

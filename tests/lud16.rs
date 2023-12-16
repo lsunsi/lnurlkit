@@ -28,9 +28,9 @@ async fn test() {
                     })
                 }
             },
-            |req: lnurlkit::pay::server::Callback| async move {
+            |_: lnurlkit::pay::server::Callback| async move {
                 Ok(lnurlkit::pay::server::CallbackResponse {
-                    pr: format!("pierre:{}", req.millisatoshis),
+                    pr: String::from("pierre"),
                     disposable: false,
                     success_action: None,
                 })

@@ -67,7 +67,7 @@ impl TryFrom<Entrypoint> for Vec<u8> {
 }
 
 pub struct Callback {
-    pub millisatoshis: u64,
+    pub amount: super::Amount,
     pub comment: Option<String>,
 }
 
@@ -75,10 +75,10 @@ impl<'a> TryFrom<&'a str> for Callback {
     type Error = &'static str;
 
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
-        serde_urlencoded::from_str::<super::serde::Callback>(s)
+        serde_urlencoded::from_str::<de::Callback>(s)
             .map_err(|_| "deserialize failed")
             .map(|query| Callback {
-                millisatoshis: query.amount,
+                amount: query.amount,
                 comment: query.comment.map(String::from),
             })
     }
@@ -154,6 +154,17 @@ mod ser {
         pub disposable: bool,
         #[serde(rename = "successAction")]
         pub success_action: Option<BTreeMap<&'static str, &'a str>>,
+    }
+}
+
+mod de {
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    pub(super) struct Callback<'a> {
+        pub comment: Option<&'a str>,
+        #[serde(with = "super::super::serde::amount")]
+        pub amount: super::super::Amount,
     }
 }
 
@@ -335,7 +346,10 @@ mod tests {
         let input = "amount=314";
         let parsed: super::Callback = input.try_into().expect("parse");
 
-        assert_eq!(parsed.millisatoshis, 314);
+        assert!(matches!(
+            parsed.amount,
+            super::super::Amount::Millisatoshis(314)
+        ));
         assert!(parsed.comment.is_none());
     }
 
@@ -344,8 +358,23 @@ mod tests {
         let input = "amount=314&comment=comentario";
         let parsed: super::Callback = input.try_into().expect("parse");
 
-        assert_eq!(parsed.millisatoshis, 314);
+        assert!(matches!(
+            parsed.amount,
+            super::super::Amount::Millisatoshis(314)
+        ));
         assert_eq!(parsed.comment.unwrap(), "comentario");
+    }
+
+    #[test]
+    fn callback_parse_currency() {
+        let input = "amount=314.BRL";
+        let parsed: super::Callback = input.try_into().expect("parse");
+
+        assert!(matches!(
+            parsed.amount,
+            super::super::Amount::Currency(c, 314) if c == "BRL"
+        ));
+        assert!(parsed.comment.is_none());
     }
 
     #[test]

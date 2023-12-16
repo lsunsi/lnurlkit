@@ -107,10 +107,14 @@ impl TryFrom<&[u8]> for Entrypoint {
 
 impl Entrypoint {
     #[must_use]
-    pub fn invoice<'a>(&'a self, millisatoshis: u64, comment: Option<&'a str>) -> Callback<'a> {
+    pub fn invoice<'a>(
+        &'a self,
+        amount: &'a super::Amount,
+        comment: Option<&'a str>,
+    ) -> Callback<'a> {
         Callback {
             url: &self.callback,
-            millisatoshis,
+            amount,
             comment,
         }
     }
@@ -119,14 +123,14 @@ impl Entrypoint {
 pub struct Callback<'a> {
     pub url: &'a url::Url,
     pub comment: Option<&'a str>,
-    pub millisatoshis: u64,
+    pub amount: &'a super::Amount,
 }
 
 impl std::fmt::Display for Callback<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let query = super::serde::Callback {
+        let query = ser::Callback {
             comment: self.comment,
-            amount: self.millisatoshis,
+            amount: self.amount,
         };
 
         let querystr = serde_urlencoded::to_string(query).map_err(|_| std::fmt::Error)?;
@@ -171,6 +175,17 @@ impl std::str::FromStr for CallbackResponse {
             disposable: a.disposable.unwrap_or(true),
             success_action,
         })
+    }
+}
+
+mod ser {
+    use serde::Serialize;
+
+    #[derive(Serialize)]
+    pub(super) struct Callback<'a> {
+        pub comment: Option<&'a str>,
+        #[serde(with = "super::super::serde::amount")]
+        pub amount: &'a super::super::Amount,
     }
 }
 
@@ -360,7 +375,9 @@ mod tests {
         let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(
-            parsed.invoice(314, None).to_string(),
+            parsed
+                .invoice(&super::super::Amount::Millisatoshis(314), None)
+                .to_string(),
             "https://yuri/?o=callback&amount=314"
         );
     }
@@ -377,8 +394,35 @@ mod tests {
         let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
 
         assert_eq!(
-            parsed.invoice(314, Some("comentario")).to_string(),
+            parsed
+                .invoice(
+                    &super::super::Amount::Millisatoshis(314),
+                    Some("comentario")
+                )
+                .to_string(),
             "https://yuri/?o=callback&comment=comentario&amount=314"
+        );
+    }
+
+    #[test]
+    fn callback_render_currency() {
+        let input = r#"{
+            "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
+            "callback": "https://yuri?o=callback",
+            "maxSendable": 315,
+            "minSendable": 314
+        }"#;
+
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
+
+        assert_eq!(
+            parsed
+                .invoice(
+                    &super::super::Amount::Currency(String::from("BRL"), 314),
+                    None
+                )
+                .to_string(),
+            "https://yuri/?o=callback&amount=314.BRL"
         );
     }
 

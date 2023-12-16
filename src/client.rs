@@ -133,10 +133,10 @@ impl Pay<'_> {
     /// Returns errors on network or deserialization failures.
     pub async fn invoice(
         &self,
-        millisatoshis: u64,
+        amount: &crate::pay::Amount,
         comment: Option<&str>,
     ) -> Result<crate::pay::client::CallbackResponse, &'static str> {
-        let callback = self.core.invoice(millisatoshis, comment);
+        let callback = self.core.invoice(amount, comment);
 
         let response = self
             .client

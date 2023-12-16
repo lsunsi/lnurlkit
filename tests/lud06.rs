@@ -31,7 +31,7 @@ async fn test() {
             },
             |req: lnurlkit::pay::server::Callback| async move {
                 Ok(lnurlkit::pay::server::CallbackResponse {
-                    pr: format!("pierre:{}", req.millisatoshis),
+                    pr: format!("pierre:{:?}", req.amount),
                     disposable: false,
                     success_action: None,
                 })
@@ -65,7 +65,10 @@ async fn test() {
         "the destroyer of worlds"
     );
 
-    let invoice = pr.invoice(314, Some("comment")).await.expect("callback");
+    let invoice = pr
+        .invoice(&lnurlkit::pay::Amount::Millisatoshis(314), Some("comment"))
+        .await
+        .expect("callback");
 
-    assert_eq!(&invoice.pr as &str, "pierre:314");
+    assert_eq!(&invoice.pr as &str, "pierre:Millisatoshis(314)");
 }
