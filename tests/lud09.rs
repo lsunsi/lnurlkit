@@ -26,6 +26,7 @@ async fn test() {
                         identifier: None,
                         email: None,
                         currencies: None,
+                        payer: None,
                     })
                 }
             },

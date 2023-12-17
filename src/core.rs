@@ -94,7 +94,7 @@ fn resolve_address(s: &str) -> Result<url::Url, &'static str> {
 #[derive(Debug)]
 pub enum Entrypoint {
     Channel(channel::client::Entrypoint),
-    Pay(pay::client::Entrypoint),
+    Pay(Box<pay::client::Entrypoint>),
     Withdraw(withdraw::client::Entrypoint),
 }
 
@@ -114,7 +114,7 @@ impl TryFrom<&[u8]> for Entrypoint {
             Ok(Entrypoint::Channel(cr))
         } else if tag.tag == pay::TAG {
             let pr = s.try_into().map_err(|_| "deserialize data failed")?;
-            Ok(Entrypoint::Pay(pr))
+            Ok(Entrypoint::Pay(Box::new(pr)))
         } else if tag.tag == withdraw::TAG {
             let wr = s.try_into().map_err(|_| "deserialize data failed")?;
             Ok(Entrypoint::Withdraw(wr))

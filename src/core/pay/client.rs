@@ -12,8 +12,10 @@ pub struct Entrypoint {
     pub min: u64,
     pub max: u64,
     pub currencies: Option<Vec<super::Currency>>,
+    pub payer: Option<super::Payer>,
 }
 
+#[allow(clippy::too_many_lines)]
 impl TryFrom<&[u8]> for Entrypoint {
     type Error = &'static str;
 
@@ -34,6 +36,37 @@ impl TryFrom<&[u8]> for Entrypoint {
                     convertible: c.convertible,
                 })
                 .collect()
+        });
+
+        let payer = p.payer_data.map(|p| super::Payer {
+            name: p.name.map(|p| super::PayerRequirement {
+                mandatory: p.mandatory,
+            }),
+            pubkey: p.pubkey.map(|p| super::PayerRequirement {
+                mandatory: p.mandatory,
+            }),
+            identifier: p.identifier.map(|p| super::PayerRequirement {
+                mandatory: p.mandatory,
+            }),
+            email: p.email.map(|p| super::PayerRequirement {
+                mandatory: p.mandatory,
+            }),
+            auth: p.auth.map(|p| super::PayerRequirementAuth {
+                mandatory: p.mandatory,
+                k1: p.k1,
+            }),
+            others: p
+                .others
+                .into_iter()
+                .map(|(k, v)| {
+                    (
+                        String::from(k),
+                        super::PayerRequirement {
+                            mandatory: v.mandatory,
+                        },
+                    )
+                })
+                .collect(),
         });
 
         let metadata = serde_json::from_str::<Vec<(String, Value)>>(&p.metadata)
@@ -101,6 +134,7 @@ impl TryFrom<&[u8]> for Entrypoint {
             jpeg,
             png,
             currencies,
+            payer,
         })
     }
 }
@@ -195,7 +229,7 @@ mod ser {
 }
 
 mod de {
-    use super::super::serde::Currency;
+    use super::super::serde::{Currency, Payer};
     use serde::Deserialize;
     use std::collections::BTreeMap;
     use url::Url;
@@ -212,6 +246,8 @@ mod de {
         pub comment_allowed: Option<u64>,
         #[serde(borrow)]
         pub currencies: Option<Vec<Currency<'a>>>,
+        #[serde(rename = "payerData")]
+        pub payer_data: Option<Payer<'a>>,
     }
 
     #[derive(Deserialize)]
@@ -252,6 +288,7 @@ mod tests {
         assert!(parsed.identifier.is_none());
         assert!(parsed.email.is_none());
         assert!(parsed.currencies.is_none());
+        assert!(parsed.payer.is_none());
     }
 
     #[test]
@@ -366,6 +403,60 @@ mod tests {
         assert_eq!(currencies[1].decimals, 6);
         assert!((currencies[1].multiplier - 14.5).abs() < f64::EPSILON);
         assert!(!currencies[1].convertible);
+    }
+
+    #[test]
+    fn entrypoint_parse_payer() {
+        use super::super::{PayerRequirement, PayerRequirementAuth};
+
+        let input = r#"{
+            "callback": "https://yuri?o=callback",
+            "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/crazy\", \"👋🇧🇴💾\"]]",
+            "maxSendable": 315,
+            "minSendable": 314,
+            "payerData": {
+                "name": { "mandatory": true },
+                "pubkey": { "mandatory": true },
+                "identifier": { "mandatory": false },
+                "email": { "mandatory": true },
+                "auth": { "mandatory": true, "k1": "3132333132333231333132333132333132333132333132333331323132333132" },
+                "outro": { "mandatory": false }
+            }
+        }"#;
+
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
+        let payer = parsed.payer.unwrap();
+
+        assert!(matches!(payer.name.unwrap(), PayerRequirement { mandatory } if mandatory));
+        assert!(matches!(payer.pubkey.unwrap(), PayerRequirement { mandatory } if mandatory));
+        assert!(matches!(payer.identifier.unwrap(), PayerRequirement { mandatory } if !mandatory));
+        assert!(matches!(payer.email.unwrap(), PayerRequirement { mandatory } if mandatory));
+        assert!(
+            matches!(payer.auth.unwrap(), PayerRequirementAuth { mandatory, k1 } if mandatory && &k1 == b"12312321312312312312312331212312")
+        );
+
+        assert_eq!(payer.others.len(), 1);
+        assert!(
+            matches!(payer.others.get("outro").unwrap(), PayerRequirement { mandatory } if !mandatory)
+        );
+
+        let input = r#"{
+            "callback": "https://yuri?o=callback",
+            "metadata": "[[\"text/plain\", \"boneco do steve magal\"],[\"text/crazy\", \"👋🇧🇴💾\"]]",
+            "maxSendable": 315,
+            "minSendable": 314,
+            "payerData": {}
+        }"#;
+
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
+        let payer = parsed.payer.unwrap();
+
+        assert!(payer.name.is_none());
+        assert!(payer.pubkey.is_none());
+        assert!(payer.identifier.is_none());
+        assert!(payer.email.is_none());
+        assert!(payer.auth.is_none());
+        assert_eq!(payer.others.len(), 0);
     }
 
     #[test]

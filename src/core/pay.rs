@@ -18,8 +18,30 @@ pub struct Currency {
     pub convertible: bool,
 }
 
+#[derive(Clone, Debug)]
+pub struct Payer {
+    pub name: Option<PayerRequirement>,
+    pub pubkey: Option<PayerRequirement>,
+    pub identifier: Option<PayerRequirement>,
+    pub email: Option<PayerRequirement>,
+    pub auth: Option<PayerRequirementAuth>,
+    pub others: std::collections::HashMap<String, PayerRequirement>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PayerRequirement {
+    pub mandatory: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct PayerRequirementAuth {
+    pub mandatory: bool,
+    pub k1: [u8; 32],
+}
+
 mod serde {
     use serde::{Deserialize, Serialize};
+    use std::collections::HashMap;
 
     #[derive(Deserialize, Serialize)]
     pub(super) struct Currency<'a> {
@@ -30,6 +52,34 @@ mod serde {
         pub multiplier: f64,
         #[serde(default)]
         pub convertible: bool,
+    }
+
+    #[derive(Deserialize, Serialize)]
+    pub(super) struct Payer<'a> {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub name: Option<PayerRequirement>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub pubkey: Option<PayerRequirement>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub identifier: Option<PayerRequirement>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub email: Option<PayerRequirement>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub auth: Option<PayerRequirementAuth>,
+        #[serde(borrow, flatten)]
+        pub others: HashMap<&'a str, PayerRequirement>,
+    }
+
+    #[derive(Deserialize, Serialize)]
+    pub struct PayerRequirement {
+        pub mandatory: bool,
+    }
+
+    #[derive(Deserialize, Serialize)]
+    pub struct PayerRequirementAuth {
+        pub mandatory: bool,
+        #[serde(with = "hex::serde")]
+        pub k1: [u8; 32],
     }
 
     pub(super) mod amount {

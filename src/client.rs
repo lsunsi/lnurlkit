@@ -55,7 +55,7 @@ pub struct Channel<'a> {
 #[derive(Clone, Debug)]
 pub struct Pay<'a> {
     client: &'a reqwest::Client,
-    pub core: crate::pay::client::Entrypoint,
+    pub core: Box<crate::pay::client::Entrypoint>,
 }
 
 #[derive(Clone, Debug)]

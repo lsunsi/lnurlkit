@@ -11,6 +11,7 @@ pub struct Entrypoint {
     pub min: u64,
     pub max: u64,
     pub currencies: Option<Vec<super::Currency>>,
+    pub payer: Option<super::Payer>,
 }
 
 impl TryFrom<Entrypoint> for Vec<u8> {
@@ -60,6 +61,39 @@ impl TryFrom<Entrypoint> for Vec<u8> {
                         convertible: c.convertible,
                     })
                     .collect()
+            }),
+            payer: r.payer.as_ref().map(|p| super::serde::Payer {
+                name: p.name.as_ref().map(|p| super::serde::PayerRequirement {
+                    mandatory: p.mandatory,
+                }),
+                pubkey: p.pubkey.as_ref().map(|p| super::serde::PayerRequirement {
+                    mandatory: p.mandatory,
+                }),
+                identifier: p
+                    .identifier
+                    .as_ref()
+                    .map(|p| super::serde::PayerRequirement {
+                        mandatory: p.mandatory,
+                    }),
+                email: p.email.as_ref().map(|p| super::serde::PayerRequirement {
+                    mandatory: p.mandatory,
+                }),
+                auth: p.auth.as_ref().map(|p| super::serde::PayerRequirementAuth {
+                    mandatory: p.mandatory,
+                    k1: p.k1,
+                }),
+                others: p
+                    .others
+                    .iter()
+                    .map(|(k, v)| {
+                        (
+                            k as &str,
+                            super::serde::PayerRequirement {
+                                mandatory: v.mandatory,
+                            },
+                        )
+                    })
+                    .collect(),
             }),
         })
         .map_err(|_| "serialize failed")
@@ -130,7 +164,7 @@ impl std::fmt::Display for CallbackResponse {
 }
 
 mod ser {
-    use super::super::serde::Currency;
+    use super::super::serde::{Currency, Payer};
     use serde::Serialize;
     use std::collections::BTreeMap;
     use url::Url;
@@ -148,6 +182,8 @@ mod ser {
         pub comment_allowed: u64,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub currencies: Option<Vec<Currency<'a>>>,
+        #[serde(rename = "payerData", skip_serializing_if = "Option::is_none")]
+        pub payer: Option<Payer<'a>>,
     }
 
     #[derive(Serialize)]
@@ -187,6 +223,7 @@ mod tests {
             identifier: None,
             email: None,
             currencies: None,
+            payer: None,
         };
 
         assert_eq!(
@@ -209,6 +246,7 @@ mod tests {
             identifier: None,
             email: None,
             currencies: None,
+            payer: None,
         };
 
         assert_eq!(
@@ -231,6 +269,7 @@ mod tests {
             identifier: None,
             email: None,
             currencies: None,
+            payer: None,
         };
 
         assert_eq!(
@@ -253,6 +292,7 @@ mod tests {
             identifier: None,
             email: None,
             currencies: None,
+            payer: None,
         };
 
         assert_eq!(
@@ -275,6 +315,7 @@ mod tests {
             identifier: Some(String::from("steve@magal.brutal")),
             email: None,
             currencies: None,
+            payer: None,
         };
 
         assert_eq!(
@@ -297,6 +338,7 @@ mod tests {
             identifier: None,
             email: Some(String::from("steve@magal.brutal")),
             currencies: None,
+            payer: None,
         };
 
         assert_eq!(
@@ -336,11 +378,77 @@ mod tests {
                     convertible: false,
                 },
             ]),
+            payer: None,
         };
 
         assert_eq!(
             Vec::<u8>::try_from(query).unwrap(),
             br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0,"currencies":[{"code":"BRL","name":"Reais","symbol":"R$","decimals":2,"multiplier":314.15,"convertible":true},{"code":"USD","name":"Dolar","symbol":"$","decimals":6,"multiplier":123.321,"convertible":false}]}"#
+        );
+    }
+
+    #[test]
+    fn entrypoint_render_payer() {
+        let query = super::Entrypoint {
+            callback: url::Url::parse("https://yuri?o=callback").expect("url"),
+            short_description: String::from("boneco do steve magal"),
+            long_description: None,
+            jpeg: None,
+            png: None,
+            comment_size: None,
+            min: 314,
+            max: 315,
+            identifier: None,
+            email: None,
+            currencies: None,
+            payer: Some(super::super::Payer {
+                name: Some(super::super::PayerRequirement { mandatory: false }),
+                pubkey: Some(super::super::PayerRequirement { mandatory: true }),
+                identifier: Some(super::super::PayerRequirement { mandatory: false }),
+                email: Some(super::super::PayerRequirement { mandatory: true }),
+                auth: Some(super::super::PayerRequirementAuth {
+                    mandatory: false,
+                    k1: *b"12312321312312312312312331212312",
+                }),
+                others: [(
+                    String::from("outro"),
+                    super::super::PayerRequirement { mandatory: false },
+                )]
+                .into_iter()
+                .collect(),
+            }),
+        };
+
+        assert_eq!(
+            Vec::<u8>::try_from(query.clone()).unwrap(),
+            br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0,"payerData":{"name":{"mandatory":false},"pubkey":{"mandatory":true},"identifier":{"mandatory":false},"email":{"mandatory":true},"auth":{"mandatory":false,"k1":"3132333132333231333132333132333132333132333132333331323132333132"},"outro":{"mandatory":false}}}"#
+        );
+
+        let query = super::Entrypoint {
+            callback: url::Url::parse("https://yuri?o=callback").expect("url"),
+            short_description: String::from("boneco do steve magal"),
+            long_description: None,
+            jpeg: None,
+            png: None,
+            comment_size: None,
+            min: 314,
+            max: 315,
+            identifier: None,
+            email: None,
+            currencies: None,
+            payer: Some(super::super::Payer {
+                name: None,
+                pubkey: None,
+                identifier: None,
+                email: None,
+                auth: None,
+                others: std::collections::HashMap::new(),
+            }),
+        };
+
+        assert_eq!(
+            Vec::<u8>::try_from(query).unwrap(),
+            br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0,"payerData":{}}"#
         );
     }
 
