@@ -11,7 +11,7 @@ pub struct Entrypoint {
     pub min: u64,
     pub max: u64,
     pub currencies: Option<Vec<super::Currency>>,
-    pub payer: Option<super::Payer>,
+    pub payer: Option<super::PayerRequirements>,
 }
 
 impl TryFrom<Entrypoint> for Vec<u8> {
@@ -104,6 +104,7 @@ pub struct Callback {
     pub amount: super::Amount,
     pub comment: Option<String>,
     pub convert: Option<String>,
+    pub payer: Option<super::PayerInformations>,
 }
 
 impl<'a> TryFrom<&'a str> for Callback {
@@ -112,10 +113,36 @@ impl<'a> TryFrom<&'a str> for Callback {
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
         serde_urlencoded::from_str::<de::Callback>(s)
             .map_err(|_| "deserialize failed")
-            .map(|cb| Callback {
-                amount: cb.amount,
-                comment: cb.comment.map(String::from),
-                convert: cb.convert.map(String::from),
+            .and_then(|cb| {
+                Ok(Callback {
+                    amount: cb.amount,
+                    comment: cb.comment.map(String::from),
+                    convert: cb.convert.map(String::from),
+                    payer: cb
+                        .payerdata
+                        .map(|pd| {
+                            serde_json::from_str::<super::serde::PayerInformations>(&pd)
+                                .map_err(|_| "deserialize payer failed")
+                                .and_then(|pi| {
+                                    Ok(super::PayerInformations {
+                                        name: pi.name.map(String::from),
+                                        pubkey: pi
+                                            .pubkey
+                                            .map(hex::decode)
+                                            .transpose()
+                                            .map_err(|_| "deserialize pubkey failed")?,
+                                        identifier: pi.identifier.map(String::from),
+                                        email: pi.email.map(String::from),
+                                        auth: pi.auth.map(|pia| super::PayerInformationAuth {
+                                            key: pia.key,
+                                            k1: pia.k1,
+                                            sig: pia.sig,
+                                        }),
+                                    })
+                                })
+                        })
+                        .transpose()?,
+                })
             })
     }
 }
@@ -204,6 +231,7 @@ mod de {
         #[serde(with = "super::super::serde::amount")]
         pub amount: super::super::Amount,
         pub convert: Option<&'a str>,
+        pub payerdata: Option<String>,
     }
 }
 
@@ -401,7 +429,7 @@ mod tests {
             identifier: None,
             email: None,
             currencies: None,
-            payer: Some(super::super::Payer {
+            payer: Some(super::super::PayerRequirements {
                 name: Some(super::super::PayerRequirement { mandatory: false }),
                 pubkey: Some(super::super::PayerRequirement { mandatory: true }),
                 identifier: Some(super::super::PayerRequirement { mandatory: false }),
@@ -436,7 +464,7 @@ mod tests {
             identifier: None,
             email: None,
             currencies: None,
-            payer: Some(super::super::Payer {
+            payer: Some(super::super::PayerRequirements {
                 name: None,
                 pubkey: None,
                 identifier: None,
@@ -493,6 +521,26 @@ mod tests {
         let input = "amount=314&convert=BRL";
         let parsed: super::Callback = input.try_into().expect("parse");
         assert_eq!(parsed.convert.unwrap(), "BRL");
+    }
+
+    #[test]
+    fn callback_parse_payer() {
+        let input = "amount=314&payerdata=%7B%22name%22%3A%22robson%22%2C%22pubkey%22%3A%227075626c696361%22%2C%22identifier%22%3A%22rob%22%2C%22email%22%3A%22rob%40son%22%2C%22auth%22%3A%7B%22key%22%3A%226368617665%22%2C%22k1%22%3A%223132333332313132333132333133313233323133313233313233323131333232%22%2C%22sig%22%3A%2236353634353635343635343634353634353635343635343634353635343635343634353635343634353635343635343635343635343635343634363534333433%22%7D%7D";
+        let parsed: super::Callback = input.try_into().expect("parse");
+        let payer = parsed.payer.unwrap();
+
+        assert_eq!(payer.name.unwrap(), "robson");
+        assert_eq!(payer.pubkey.unwrap(), b"publica");
+        assert_eq!(payer.identifier.unwrap(), "rob");
+        assert_eq!(payer.email.unwrap(), "rob@son");
+
+        let auth = payer.auth.unwrap();
+        assert_eq!(auth.key, b"chave");
+        assert_eq!(auth.k1, *b"12332112312313123213123123211322");
+        assert_eq!(
+            auth.sig,
+            *b"6564565465464564565465464565465464565464565465465465465464654343"
+        );
     }
 
     #[test]

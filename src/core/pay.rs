@@ -19,7 +19,7 @@ pub struct Currency {
 }
 
 #[derive(Clone, Debug)]
-pub struct Payer {
+pub struct PayerRequirements {
     pub name: Option<PayerRequirement>,
     pub pubkey: Option<PayerRequirement>,
     pub identifier: Option<PayerRequirement>,
@@ -37,6 +37,22 @@ pub struct PayerRequirement {
 pub struct PayerRequirementAuth {
     pub mandatory: bool,
     pub k1: [u8; 32],
+}
+
+#[derive(Clone, Debug)]
+pub struct PayerInformations {
+    pub name: Option<String>,
+    pub pubkey: Option<Vec<u8>>,
+    pub identifier: Option<String>,
+    pub email: Option<String>,
+    pub auth: Option<PayerInformationAuth>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PayerInformationAuth {
+    pub key: Vec<u8>,
+    pub k1: [u8; 32],
+    pub sig: [u8; 64],
 }
 
 mod serde {
@@ -80,6 +96,30 @@ mod serde {
         pub mandatory: bool,
         #[serde(with = "hex::serde")]
         pub k1: [u8; 32],
+    }
+
+    #[derive(Deserialize, Serialize)]
+    pub struct PayerInformations<'a> {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub name: Option<&'a str>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub pubkey: Option<&'a str>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub identifier: Option<&'a str>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub email: Option<&'a str>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub auth: Option<PayerInformationAuth>,
+    }
+
+    #[derive(Deserialize, Serialize)]
+    pub struct PayerInformationAuth {
+        #[serde(with = "hex::serde")]
+        pub key: Vec<u8>,
+        #[serde(with = "hex::serde")]
+        pub k1: [u8; 32],
+        #[serde(with = "hex::serde")]
+        pub sig: [u8; 64],
     }
 
     pub(super) mod amount {

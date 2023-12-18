@@ -12,7 +12,7 @@ pub struct Entrypoint {
     pub min: u64,
     pub max: u64,
     pub currencies: Option<Vec<super::Currency>>,
-    pub payer: Option<super::Payer>,
+    pub payer: Option<super::PayerRequirements>,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -38,7 +38,7 @@ impl TryFrom<&[u8]> for Entrypoint {
                 .collect()
         });
 
-        let payer = p.payer_data.map(|p| super::Payer {
+        let payer = p.payer_data.map(|p| super::PayerRequirements {
             name: p.name.map(|p| super::PayerRequirement {
                 mandatory: p.mandatory,
             }),
@@ -146,12 +146,14 @@ impl Entrypoint {
         amount: &'a super::Amount,
         comment: Option<&'a str>,
         convert: Option<&'a str>,
+        payer: Option<super::PayerInformations>,
     ) -> Callback<'a> {
         Callback {
             url: &self.callback,
             amount,
             comment,
             convert,
+            payer,
         }
     }
 }
@@ -161,14 +163,40 @@ pub struct Callback<'a> {
     pub comment: Option<&'a str>,
     pub amount: &'a super::Amount,
     pub convert: Option<&'a str>,
+    pub payer: Option<super::PayerInformations>,
 }
 
 impl std::fmt::Display for Callback<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let pubkey = self
+            .payer
+            .as_ref()
+            .and_then(|p| p.pubkey.as_ref().map(hex::encode));
+
+        let payer = self
+            .payer
+            .as_ref()
+            .map(|p| {
+                serde_json::to_string(&super::serde::PayerInformations {
+                    name: p.name.as_deref(),
+                    pubkey: pubkey.as_deref(),
+                    identifier: p.identifier.as_deref(),
+                    email: p.email.as_deref(),
+                    auth: p.auth.as_ref().map(|p| super::serde::PayerInformationAuth {
+                        key: p.key.clone(),
+                        k1: p.k1,
+                        sig: p.sig,
+                    }),
+                })
+            })
+            .transpose()
+            .map_err(|_| std::fmt::Error)?;
+
         let query = ser::Callback {
             comment: self.comment,
             amount: self.amount,
             convert: self.convert,
+            payerdata: payer.as_deref(),
         };
 
         let querystr = serde_urlencoded::to_string(query).map_err(|_| std::fmt::Error)?;
@@ -225,6 +253,7 @@ mod ser {
         #[serde(with = "super::super::serde::amount")]
         pub amount: &'a super::super::Amount,
         pub convert: Option<&'a str>,
+        pub payerdata: Option<&'a str>,
     }
 }
 
@@ -472,7 +501,7 @@ mod tests {
 
         assert_eq!(
             parsed
-                .invoice(&super::super::Amount::Millisatoshis(314), None, None)
+                .invoice(&super::super::Amount::Millisatoshis(314), None, None, None)
                 .to_string(),
             "https://yuri/?o=callback&amount=314"
         );
@@ -494,6 +523,7 @@ mod tests {
                 .invoice(
                     &super::super::Amount::Millisatoshis(314),
                     Some("comentario"),
+                    None,
                     None
                 )
                 .to_string(),
@@ -517,6 +547,7 @@ mod tests {
                 .invoice(
                     &super::super::Amount::Currency(String::from("BRL"), 314),
                     None,
+                    None,
                     None
                 )
                 .to_string(),
@@ -537,9 +568,67 @@ mod tests {
 
         assert_eq!(
             parsed
-                .invoice(&super::super::Amount::Millisatoshis(314), None, Some("BRL"))
+                .invoice(
+                    &super::super::Amount::Millisatoshis(314),
+                    None,
+                    Some("BRL"),
+                    None
+                )
                 .to_string(),
             "https://yuri/?o=callback&amount=314&convert=BRL"
+        );
+    }
+
+    #[test]
+    fn callback_render_payer() {
+        let input = r#"{
+            "metadata": "[[\"text/plain\", \"boneco do steve magal\"]]",
+            "callback": "https://yuri?o=callback",
+            "maxSendable": 315,
+            "minSendable": 314
+        }"#;
+
+        let parsed: super::Entrypoint = input.as_bytes().try_into().expect("parse");
+
+        assert_eq!(
+            parsed
+                .invoice(
+                    &super::super::Amount::Millisatoshis(314),
+                    None,
+                    None,
+                    Some(super::super::PayerInformations {
+                        name: None,
+                        pubkey: None,
+                        identifier: None,
+                        email: None,
+                        auth: None,
+                    })
+                )
+                .to_string(),
+            "https://yuri/?o=callback&amount=314&payerdata=%7B%7D"
+        );
+
+        assert_eq!(
+            parsed
+                .invoice(
+                    &super::super::Amount::Millisatoshis(314),
+                    None,
+                    None,
+                    Some(super::super::PayerInformations {
+                        name: Some(String::from("robson")),
+                        pubkey: Some(b"publica".to_vec()),
+                        identifier: Some(String::from("rob")),
+                        email: Some(String::from("rob@son")),
+                        auth: Some(super::super::PayerInformationAuth {
+                            key: b"chave".to_vec(),
+                            k1: *b"12332112312313123213123123211322",
+                            sig:
+                                *b"6564565465464564565465464565465464565464565465465465465464654343"
+                        })
+                    })
+                )
+                .to_string(),
+            "https://yuri/?o=callback&amount=314&payerdata=%7B%22name%22%3A%22robson%22%2C%22pubkey%22%3A%227075626c696361%22%2C%22identifier%22%3A%22rob%22%2C%22email%22%3A%22rob%40son%22%2C%22auth%22%3A%7B%22key%22%3A%226368617665%22%2C%22k1%22%3A%223132333332313132333132333133313233323133313233313233323131333232%22%2C%22sig%22%3A%2236353634353635343635343634353634353635343635343634353635343635343634353635343634353635343635343635343635343635343634363534333433%22%7D%7D"
         );
     }
 

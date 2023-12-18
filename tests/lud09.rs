@@ -71,7 +71,7 @@ async fn test() {
     };
 
     let invoice = pr
-        .invoice(&lnurlkit::pay::Amount::Millisatoshis(0), None, None)
+        .invoice(&lnurlkit::pay::Amount::Millisatoshis(0), None, None, None)
         .await
         .expect("callback");
 
@@ -81,6 +81,7 @@ async fn test() {
         .invoice(
             &lnurlkit::pay::Amount::Millisatoshis(1),
             Some("mensagem"),
+            None,
             None,
         )
         .await
@@ -96,6 +97,7 @@ async fn test() {
         .invoice(
             &lnurlkit::pay::Amount::Millisatoshis(2),
             Some("descricao"),
+            None,
             None,
         )
         .await

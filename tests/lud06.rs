@@ -71,6 +71,7 @@ async fn test() {
             &lnurlkit::pay::Amount::Millisatoshis(314),
             Some("comment"),
             None,
+            None,
         )
         .await
         .expect("callback");

@@ -96,6 +96,7 @@ async fn test() {
             &lnurlkit::pay::Amount::Currency(String::from("USD"), 314),
             None,
             Some("BRL"),
+            None,
         )
         .await
         .expect("callback");
