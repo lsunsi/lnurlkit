@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.10](https://github.com/lsunsi/lnurlkit/compare/v0.1.9...v0.1.10) - 2023-12-18
+
+### Added
+- *(pay)* add lud18 base test
+- *(pay)* add support for basic serde of payer data callback
+- *(pay)* add support for basic serde of payer data
+- *(pay)* add lud21 test
+- *(pay)* add preliminary support for convert on pay callback
+- *(pay)* add preliminary support for currencies on callback
+- *(pay)* add preliminary support for currencies on entrypoint
+- *(auth)* add draft version of server for auth
+- *(auth)* add auth callback to client
+- add auth lud4 entrypoint
+
+### Fixed
+- *(withdraw)* fix fast withdraw parsing
+
+### Other
+- centralize generic callback response in core
+- rename response to entrypoint
+
 ## [0.1.9](https://github.com/lsunsi/lnurlkit/compare/v0.1.8...v0.1.9) - 2023-12-12
 
 ### Added
