@@ -16,7 +16,7 @@ async fn test() {
                     Ok(lnurlkit::pay::server::Entrypoint {
                         callback,
                         short_description: String::from("today i become death"),
-                        long_description: Some(String::from("the destroyer of worlds")),
+                        long_description: None,
                         jpeg: None,
                         png: None,
                         comment_size: None,

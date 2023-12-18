@@ -26,7 +26,7 @@ This library works as a toolkit so you can serve and make your LNURL requests wi
 - [LUD-15](https://github.com/lnurl/luds/blob/luds/15.md): 🆘 core 🆘 client 🆘 server 🆘 tests
 - [LUD-16](https://github.com/lnurl/luds/blob/luds/16.md): ✅ core ✅ client ✅ server ✅ tests
 - [LUD-17](https://github.com/lnurl/luds/blob/luds/17.md): ✅ core ⚠️ client ⚠️ server ⚠️ tests
-- [LUD-18](https://github.com/lnurl/luds/blob/luds/18.md): 🆘 core 🆘 client 🆘 server 🆘 tests
+- [LUD-18](https://github.com/lnurl/luds/blob/luds/18.md): ✅ core ⚠️ client ⚠️ server ⚠️ tests
 - [LUD-19](https://github.com/lnurl/luds/blob/luds/19.md): 🆘 core 🆘 client 🆘 server 🆘 tests
 - [LUD-20](https://github.com/lnurl/luds/blob/luds/20.md): ✅ core ✅ client ✅ server ⚠️ tests
 - [LUD-21 *proposal*](https://github.com/lnurl/luds/blob/8580e3c8cbfd8fc95a6c0e5f7fcb5b048a0d5b61/21.md): ✅ core ✅ client ✅ server ✅ tests
