@@ -15,7 +15,13 @@ pub struct Currency {
     pub symbol: String,
     pub decimals: u8,
     pub multiplier: f64,
-    pub convertible: bool,
+    pub convertible: Option<CurrencyConvertible>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CurrencyConvertible {
+    pub min: u64,
+    pub max: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -66,8 +72,14 @@ mod serde {
         pub symbol: &'a str,
         pub decimals: u8,
         pub multiplier: f64,
-        #[serde(default)]
-        pub convertible: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub convertible: Option<CurrencyConvertible>,
+    }
+
+    #[derive(Deserialize, Serialize)]
+    pub struct CurrencyConvertible {
+        pub min: u64,
+        pub max: u64,
     }
 
     #[derive(Deserialize, Serialize)]

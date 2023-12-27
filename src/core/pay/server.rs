@@ -58,7 +58,12 @@ impl TryFrom<Entrypoint> for Vec<u8> {
                         symbol: &c.symbol,
                         decimals: c.decimals,
                         multiplier: c.multiplier,
-                        convertible: c.convertible,
+                        convertible: c.convertible.as_ref().map(|c| {
+                            super::serde::CurrencyConvertible {
+                                min: c.min,
+                                max: c.max,
+                            }
+                        }),
                     })
                     .collect()
             }),
@@ -395,7 +400,7 @@ mod tests {
                     symbol: String::from("R$"),
                     decimals: 2,
                     multiplier: 314.15,
-                    convertible: true,
+                    convertible: Some(super::super::CurrencyConvertible { min: 100, max: 999 }),
                 },
                 super::super::Currency {
                     code: String::from("USD"),
@@ -403,7 +408,7 @@ mod tests {
                     symbol: String::from("$"),
                     decimals: 6,
                     multiplier: 123.321,
-                    convertible: false,
+                    convertible: None,
                 },
             ]),
             payer: None,
@@ -411,7 +416,7 @@ mod tests {
 
         assert_eq!(
             Vec::<u8>::try_from(query).unwrap(),
-            br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0,"currencies":[{"code":"BRL","name":"Reais","symbol":"R$","decimals":2,"multiplier":314.15,"convertible":true},{"code":"USD","name":"Dolar","symbol":"$","decimals":6,"multiplier":123.321,"convertible":false}]}"#
+            br#"{"tag":"payRequest","metadata":"[[\"text/plain\",\"boneco do steve magal\"]]","callback":"https://yuri/?o=callback","minSendable":314,"maxSendable":315,"commentAllowed":0,"currencies":[{"code":"BRL","name":"Reais","symbol":"R$","decimals":2,"multiplier":314.15,"convertible":{"min":100,"max":999}},{"code":"USD","name":"Dolar","symbol":"$","decimals":6,"multiplier":123.321}]}"#
         );
     }
 

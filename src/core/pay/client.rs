@@ -33,7 +33,10 @@ impl TryFrom<&[u8]> for Entrypoint {
                     symbol: String::from(c.symbol),
                     decimals: c.decimals,
                     multiplier: c.multiplier,
-                    convertible: c.convertible,
+                    convertible: c.convertible.map(|c| super::CurrencyConvertible {
+                        min: c.min,
+                        max: c.max,
+                    }),
                 })
                 .collect()
         });
@@ -404,7 +407,10 @@ mod tests {
                     "symbol": "R$",
                     "multiplier": 314.15,
                     "decimals": 2,
-                    "convertible": true
+                    "convertible": {
+                        "min": 100,
+                        "max": 999
+                    }
                 },
                 {
                     "code": "USD",
@@ -424,14 +430,17 @@ mod tests {
         assert_eq!(currencies[0].symbol, "R$");
         assert_eq!(currencies[0].decimals, 2);
         assert!((currencies[0].multiplier - 314.15).abs() < f64::EPSILON);
-        assert!(currencies[0].convertible);
+
+        let convertible = currencies[0].convertible.as_ref().unwrap();
+        assert_eq!(convertible.min, 100);
+        assert_eq!(convertible.max, 999);
 
         assert_eq!(currencies[1].code, "USD");
         assert_eq!(currencies[1].name, "Dólar");
         assert_eq!(currencies[1].symbol, "$");
         assert_eq!(currencies[1].decimals, 6);
         assert!((currencies[1].multiplier - 14.5).abs() < f64::EPSILON);
-        assert!(!currencies[1].convertible);
+        assert!(currencies[1].convertible.is_none());
     }
 
     #[test]
