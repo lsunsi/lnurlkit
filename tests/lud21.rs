@@ -32,7 +32,10 @@ async fn test() {
                                 symbol: String::from("R$"),
                                 decimals: 2,
                                 multiplier: 314.15,
-                                convertible: true,
+                                convertible: Some(lnurlkit::pay::CurrencyConvertible {
+                                    min: 1,
+                                    max: 3
+                                }),
                             },
                             lnurlkit::pay::Currency {
                                 code: String::from("USD"),
@@ -40,7 +43,7 @@ async fn test() {
                                 symbol: String::from("$"),
                                 decimals: 3,
                                 multiplier: 123.321,
-                                convertible: false,
+                                convertible: None,
                             },
                         ]),
                         payer: None,
@@ -82,14 +85,17 @@ async fn test() {
     assert_eq!(currencies[0].symbol, "R$");
     assert_eq!(currencies[0].decimals, 2);
     assert!((currencies[0].multiplier - 314.15).abs() < f64::EPSILON);
-    assert!(currencies[0].convertible);
+
+    let convertible = currencies[0].convertible.as_ref().unwrap();
+    assert_eq!(convertible.min, 1);
+    assert_eq!(convertible.max, 3);
 
     assert_eq!(currencies[1].code, "USD");
     assert_eq!(currencies[1].name, "Dólar");
     assert_eq!(currencies[1].symbol, "$");
     assert_eq!(currencies[1].decimals, 3);
     assert!((currencies[1].multiplier - 123.321).abs() < f64::EPSILON);
-    assert!(!currencies[1].convertible);
+    assert!(currencies[1].convertible.is_none());
 
     let invoice = pr
         .invoice(
